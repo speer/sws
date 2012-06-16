@@ -8,8 +8,9 @@ from multiprocessing import Process
 import subprocess
 import re
 import sys
-import magic   # not python standard lib - for mime type detection
 from time import gmtime, strftime
+# not python standard lib - for mime type detection
+import magic
 
 
 # don't always fork root process -> just if request headers have no content-length and if requested ressource is no cgi script and not a large file
@@ -20,6 +21,7 @@ from time import gmtime, strftime
 # CGI script execution: set environment variables according to RFC
 
 # transfer-encoding????
+
 
 class RequestProcessor:
 
@@ -56,7 +58,6 @@ class RequestProcessor:
 	def getFileContent(self):
 		f = open(self.resource)
 		content = f.read()
-		print sys.getsizeof(content),'FC'
 		f.close()
 		return content
 
@@ -74,6 +75,7 @@ class RequestProcessor:
 
 class HttpRequest:
 
+	# keepalive not supported by the server
 	CONNECTION_TYPE = 'close'
 	HTTP_VERSION = '1.1'
 
@@ -171,7 +173,6 @@ class HttpRequest:
 			return contentType
 
 	def generateResponseHeaders(self):
-		# keepalive not supported by the server
 		self.responseHeaders['Connection'] = HttpRequest.CONNECTION_TYPE
 		self.responseHeaders['Content-Length'] = str(len(self.document))
 		self.responseHeaders['Content-Type'] = self.getContentType()
