@@ -12,16 +12,14 @@ import magic   # not python standard lib - for mime type detection
 from time import gmtime, strftime
 
 
-# what should happen if a file is owned by root? what if a cgi script? -> if script: either error or nobody user
 # don't always fork root process -> just if request headers have no content-length and if requested ressource is no cgi script and not a large file
 # test HTTP parser with many browser (ie, ff, opera, chrome, safari, lynx, wget)
 
-# howto pass header parameters from cgi script?
-
+# GET request parameter parsing
 # POST request, parse body
-# transfer-encoding????
+# CGI script execution: set environment variables according to RFC
 
-# headers have to be computed after filter chain (content-length, etc.)
+# transfer-encoding????
 
 class RequestProcessor:
 
@@ -48,9 +46,8 @@ class RequestProcessor:
 					else:
 						self.request.document = self.getFileContent()
 
-				except Exception as e:
+				except Exception:
 					self.request.setResponseError(500,'Internal Server Error','500: Internal Server Error')
-					print e
 			else:
 				self.request.setResponseError(404,'File Not Found','404: The file could not be found')
 		else:
@@ -64,11 +61,15 @@ class RequestProcessor:
 		return content
 
 	def executeCGI(self):
-        	if os.access(self.resource, os.X_OK):
+		# check whether resource is an executable file
+        	if not os.access(self.resource, os.X_OK):
+			raise IOError
+		# check if resource is not owned by root
+		elif os.getuid() == SecureWebServer.PRIVILEGED_UID:
+			raise Exception
+		else:
                 	p = subprocess.Popen([self.resource],stdout=subprocess.PIPE)
 			return p.communicate()[0]
-		else:
-			raise IOError
 
 
 class HttpRequest:
@@ -136,20 +137,16 @@ class HttpRequest:
 
 
 		# check if POST message has a message body
-		body = False
+		entityBody = ''
 		if self.command == 'POST':
 			for key in self.headers.keys():
 				if key.lower() == 'content-length' and self.headers[key] != 0:
-					body = True
+					data = ''
+		        	        # get request body
+					#while not entityBody.endswith('\r\n\r\n'):
+					#	data = self.connection.recv(4096)
+					#	entityBody = entityBody + data
 					break
-
-		entityBody = ''
-		if body:
-			data = ''
-        	        # get request body
-			#while not entityBody.endswith('\r\n\r\n'):
-			#	data = self.connection.recv(4096)
-			#	entityBody = entityBody + data
 
 		self.statusCode = 200
 		self.statusMessage = 'OK'
@@ -262,6 +259,7 @@ class PrivilegedProcess:
 class SecureWebServer:
 
 	VERSION = 0.1
+	PRIVILEGED_UID = 0
 
 	def __init__(self, listenerUid, listenerGid, port=80, host='', unixSocketPath="/tmp/sws.peerweb.it"):
 		self.host = host
@@ -302,7 +300,13 @@ class SecureWebServer:
 					for request in self.requests:
 						if request.rootSocket == readySocket:
 							# wait for roots response
-							request.responseMessage = readySocket.recv(4096)
+							responseMsg = ''
+							data = 'init'
+							while data != '':
+								data = readySocket.recv(4096)
+								responseMsg = responseMsg + data
+							request.responseMessage = responseMsg
+
 							# remove from socketlist
 							self.socketList.remove(readySocket)
 							self.rootSockets.remove(readySocket)
