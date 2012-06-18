@@ -7,11 +7,9 @@ from time import gmtime, strftime
 import magic
 
 
-# test HTTP parser with many browser (ie, ff, opera, chrome, safari, lynx, wget)
-
-# GET request parameter parsing
-# POST request, parse body
+# GET request query parsing?
 # CGI script execution: set environment variables according to RFC
+# POST request, parse body
 
 # transfer-encoding????
 
@@ -22,19 +20,31 @@ class RequestProcessor:
 		self.request = request
 		self.documentroot = '/home/stefan/sws/docs'
 		self.cgiroot = 'cgi-bin'
+		self.directoryIndex = ['index.html','index.php','home.html']
 		self.resource = path.abspath(self.documentroot + sep + request.path)
 
-	def processRequest (self):
+	def processRequest (self, removePrivileges=True):
+
+		# check directoryIndex if path is a directory
+		if os.path.isdir(self.resource):
+			for index in self.directoryIndex:
+				f = path.abspath (self.resource + sep + index)
+				if os.path.isfile(f):
+					self.resource = f
+					break
+
 		# check if resource is inside the documentroot (jail)
 		if self.resource.startswith(self.documentroot):
 			# check if resource is a valid file
 			if os.path.isfile(self.resource):
 				try:
-					# check owner of the file
-					st = os.stat(self.resource)
-					# remove privileges
-					os.setgid(st.st_gid)
-					os.setuid(st.st_uid)
+					if removePrivileges:
+						# check owner of the file
+						st = os.stat(self.resource)
+						# remove privileges
+						os.setgid(st.st_gid)
+						os.setuid(st.st_uid)
+
 					# check if resource is a cgi script
 					if self.resource.startswith(self.documentroot + sep + self.cgiroot):
 						self.request.document = self.executeCGI()
@@ -77,6 +87,7 @@ class HttpRequest:
 		self.connection = connection
 		self.command = None
 		self.path = None
+		self.host = None
 		self.protocolVersion = 'HTTP/' + HttpRequest.HTTP_VERSION
 		self.headers = {}
 		self.requestMessage = ''
@@ -114,7 +125,7 @@ class HttpRequest:
 					self.setResponseError(400,'Bad Request','Status 400 - Version not supported')
 					return
 				self.command = words[0].upper()
-				self.path = words[1]
+				self.parseURI(words[1])
 				self.protocolVersion = words[2].upper()
 				first = False
 			else:
@@ -130,23 +141,52 @@ class HttpRequest:
 				value = line[pos+1:len(line)].strip()
 				self.headers[key] = value
 
+		# determine host
+		if self.host == None:
+			self.host = self.getHeader('host')
+
 
 		# check if POST message has a message body
 		entityBody = ''
 		if self.command == 'POST':
-			for key in self.headers.keys():
-				if key.lower() == 'content-length' and self.headers[key] != 0:
-					data = ''
-		        	        # get request body
-					#while not entityBody.endswith('\r\n\r\n'):
-					#	data = self.connection.recv(4096)
-					#	entityBody = entityBody + data
-					break
+			contentLength = self.getHeader('content-length')
+			if contentLength != None and contentLength != 0:
+				data = ''
+		        	# get request body
+				#while not entityBody.endswith('\r\n\r\n'):
+				#	data = self.connection.recv(4096)
+				#	entityBody = entityBody + data
 
 		self.statusCode = 200
 		self.statusMessage = 'OK'
 		self.document = ''
 		self.requestMessage = msg + entityBody
+
+
+	def parseURI(self,uri):
+		if re.match('[hH][tT][tT][pP][sS]?://',uri) == None:
+			# absolute path - host determined afterwards
+			m = re.match(r'([^\?]*)(\?(.*))?',uri)
+			if m != None:
+				self.path = m.group(1)
+				self.query = m.group(3)
+		else:
+			# absolute uri / determines host
+			m = re.match(r'[hH][tT][tT][pP]([sS])?://([\w\-\.]+)(:\d+)?([^\?]*)(\?(.*))?',uri)
+			if m != None:
+				self.host = m.group(2)
+				self.path = m.group(4)
+				self.query = m.group(6)
+			print self.host
+			print self.query
+			print self.path
+
+
+	def getHeader(self,searchKey):
+		for key in self.headers.keys():
+			if key.lower() == searchKey.lower():
+				return self.headers[key]
+		return None
 
 
 	def setResponseError(self, errorCode, errorMessage, errorDocument):
@@ -156,14 +196,17 @@ class HttpRequest:
 
 
 	def getContentType(self):
-		mime = magic.Magic(mime=True)
-		mime_encoding = magic.Magic(mime_encoding=True)
-		contentType = mime.from_buffer(self.document)
-		charset = mime_encoding.from_buffer(self.document)
-		if charset != 'binary':
-			return contentType + ';charset=' + charset
-		else:
-			return contentType
+		try:
+			mime = magic.Magic(mime=True)
+			mime_encoding = magic.Magic(mime_encoding=True)
+			contentType = mime.from_buffer(self.document)
+			charset = mime_encoding.from_buffer(self.document)
+			if charset != 'binary':
+				return contentType + ';charset=' + charset
+			else:
+				return contentType
+		except Exception:
+			return 'application/unknown'
 
 	def generateResponseHeaders(self):
 		self.responseHeaders['Connection'] = HttpRequest.CONNECTION_TYPE

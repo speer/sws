@@ -11,10 +11,7 @@ import httprequest
 
 class UnprivilegedProcess:
 	
-	def __init__(self, connection, rootSocket):
-		# forked client process does not need a open root listening socket
-		rootSocket.close()
-
+	def __init__(self, connection):
 		# initialize HTTP request
 		request = httprequest.HttpRequest(connection)
 		# receive data and parse
@@ -25,8 +22,7 @@ class UnprivilegedProcess:
 			# request OK - process it
 			requestProcessor = httprequest.RequestProcessor(request)
 
-			# remove root privilege from process, access ressource, etc.
-			requestProcessor.processRequest()
+			requestProcessor.processRequest(False)
 
 		# generate response message
 		request.generateResponseMessage()
@@ -52,11 +48,20 @@ class PrivilegedProcess:
 		os.chown(webserver.unixSocketPath,webserver.listenerUid,webserver.listenerGid)
 		rootListener.listen(3)
 
+		self.socketList = [rootListener]
+
 		while 1:
-			conn, addr = rootListener.accept()
-			unprivilegedProcess = Process (target=UnprivilegedProcess,args=(conn,rootListener,))
-			unprivilegedProcess.start()
-			conn.close()
+			try:
+				readReady, writeReady, exceptReady = select.select(self.socketList, [], [])
+			except:
+				break;
+			for readySocket in readReady:
+				if readySocket == rootListener:
+					conn, addr = rootListener.accept()
+					self.socketList.append(conn)
+				else:
+					unprivilegedProcess = UnprivilegedProcess(readySocket)
+					self.socketList.remove(readySocket)
 
 
 class SecureWebServer:
