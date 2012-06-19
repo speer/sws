@@ -21,11 +21,9 @@ class UnprivilegedProcess:
 
 		# check for validity of request
 		if request.checkValidity():
-			# request OK - process it
-			requestProcessor = httprequest.RequestProcessor(request)
 
-			# remove root privilege from process, access ressource, etc.
-			requestProcessor.processRequest()
+			# request OK - process it
+			request.process()
 
 		# generate response message
 		request.generateResponseMessage()
@@ -76,14 +74,14 @@ class ClientProcess:
 			rootSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 			rootSocket.connect(webserver.unixSocketPath)
 			# forward message to root process
-			rootSocket.send(request.requestMessage)
+			rootSocket.send(request.request.message)
 			# wait for roots response
 			responseMsg = ''
 			data = 'init'
 			while data != '':
 				data = rootSocket.recv(4096)
 				responseMsg = responseMsg + data
-			request.responseMessage = responseMsg
+			request.response.message = responseMsg
 			# close connection to root
 			rootSocket.close()
 		else:

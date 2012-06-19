@@ -19,10 +19,9 @@ class UnprivilegedProcess:
 
 		# check for validity of request
 		if request.checkValidity():
-			# request OK - process it
-			requestProcessor = httprequest.RequestProcessor(request)
 
-			requestProcessor.processRequest(False)
+			# request OK - process it
+			request.process(False)
 
 		# generate response message
 		request.generateResponseMessage()
@@ -110,7 +109,7 @@ class SecureWebServer:
 							while data != '':
 								data = readySocket.recv(4096)
 								responseMsg = responseMsg + data
-							request.responseMessage = responseMsg
+							request.response.message = responseMsg
 
 							# remove from socketlist
 							self.socketList.remove(readySocket)
@@ -136,7 +135,7 @@ class SecureWebServer:
 						rootSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 						rootSocket.connect(self.unixSocketPath)
 						# forward message to root process
-						rootSocket.send(request.requestMessage)
+						rootSocket.send(request.request.message)
 						# append to socketlist
 						self.rootSockets.append(rootSocket)
 						self.socketList.append(rootSocket)
