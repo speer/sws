@@ -5,6 +5,7 @@ import os
 from multiprocessing import Process
 import subprocess
 import sys
+import cPickle
 
 import httprequest
 
@@ -14,10 +15,7 @@ class UnprivilegedProcess:
 		# forked client process does not need a open root listening socket
 		rootSocket.close()
 
-		# initialize HTTP request
-		request = httprequest.HttpRequest(connection)
-		# receive data and parse
-		request.receive()
+		request = httprequest.HttpRequest(connection,True)
 
 		# check for validity of request
 		if request.checkValidity():
@@ -25,10 +23,9 @@ class UnprivilegedProcess:
 			# request OK - process it
 			request.process()
 
-		# generate response message
-		request.generateResponseMessage()
-		# send response back and close connection
-		request.sendResponse()
+		# send response object back and close connection
+		request.sendResponse(True)
+		connection.close()
 
 
 class PrivilegedProcess:
@@ -63,33 +60,57 @@ class ClientProcess:
 		webserver.listener.close()
 		print 'new client',addr
 		
-		# initialize HTTP Request
+		# initialize HTTP Request, receive data from connection
 		request = httprequest.HttpRequest(connection)
-		# receive request data and parse it
-		request.receive()
 		
 		# just forward request to root process if syntax is valid
 		if request.checkValidity():
-			# establish connection to root process
-			rootSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-			rootSocket.connect(webserver.unixSocketPath)
-			# forward message to root process
-			rootSocket.send(request.request.message)
-			# wait for roots response
-			responseMsg = ''
-			data = 'init'
-			while data != '':
-				data = rootSocket.recv(4096)
-				responseMsg = responseMsg + data
-			request.response.message = responseMsg
-			# close connection to root
-			rootSocket.close()
-		else:
-			# error in request
-			request.generateResponseMessage()
+
+			reprocess = True
+			# loop in order to support "CGI Location local redirect"
+			while reprocess:
+				# establish connection to root process
+				rootSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+				rootSocket.connect(webserver.unixSocketPath)
+
+				# forward request to root process, reinitialize response object
+				data = cPickle.dumps(httprequest.RequestResponseWrapper(request.request,httprequest.Response()))
+				data = str(len(data))+';'+data
+				rootSocket.send(data)
+
+				# wait for roots response
+				responseMsg = ''
+				data = 'init'
+				while data != '':
+					data = rootSocket.recv(4096)
+					responseMsg = responseMsg + data
+
+				wrapper = cPickle.loads(responseMsg)
+				request.response = wrapper.response
+				request.request = wrapper.request
+
+				# Location flag set in CGI script
+				if request.response.reprocess:
+					# CGI local redirect response (RFC 6.2.2)
+					curHost = request.request.host
+					curUri = request.request.uri
+					curQuery = request.request.query
+					request.parseURI(request.response.getCGIHeader('Location'))
+					# check for recursion, but may still happen
+					if request.request.host == curHost and request.request.uri == curUri and request.request.query == curQuery:
+						request.response.setError(500,'Internal Server Error','Status 500 - recursion in CGI script')
+						reprocess = False
+				else:
+					reprocess = False
+				# close connection to root
+				rootSocket.close()
+
+
+		request.generateResponseMessage()
 
 		# return response to client and close connection
 		request.sendResponse()
+		connection.close()
 
 
 class SecureWebServer:
