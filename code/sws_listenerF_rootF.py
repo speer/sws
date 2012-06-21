@@ -90,18 +90,8 @@ class ClientProcess:
 				request.request = wrapper.request
 
 				# Location flag set in CGI script
-				if request.response.reprocess:
-					# CGI local redirect response (RFC 6.2.2)
-					curHost = request.request.host
-					curUri = request.request.uri
-					curQuery = request.request.query
-					request.parseURI(request.response.getCGIHeader('Location'))
-					# check for recursion, but may still happen
-					if request.request.host == curHost and request.request.uri == curUri and request.request.query == curQuery:
-						request.response.setError(500,'Internal Server Error','Status 500 - recursion in CGI script')
-						reprocess = False
-				else:
-					reprocess = False
+				reprocess = request.checkReprocess()
+
 				# close connection to root
 				rootSocket.close()
 

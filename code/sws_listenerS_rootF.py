@@ -6,6 +6,7 @@ import os
 from multiprocessing import Process
 import subprocess
 import sys
+import cPickle
 
 import httprequest
 
@@ -15,20 +16,17 @@ class UnprivilegedProcess:
 		# forked client process does not need a open root listening socket
 		rootSocket.close()
 
-		# initialize HTTP request
-		request = httprequest.HttpRequest(connection)
-		# receive data and parse
-		request.receive()
+		request = httprequest.HttpRequest(connection,True)
 
 		# check for validity of request
 		if request.checkValidity():
+
 			# request OK - process it
 			request.process()
 
-		# generate response message
-		request.generateResponseMessage()
-		# send response back and close connection
-		request.sendResponse()
+		# send response object back and close connection
+		request.sendResponse(True)
+		connection.close()
 
 
 class PrivilegedProcess:
@@ -104,21 +102,43 @@ class SecureWebServer:
 								responseMsg = responseMsg + data
 							request.response.message = responseMsg
 
+							wrapper = cPickle.loads(responseMsg)
+							request.response = wrapper.response
+							request.request = wrapper.request
+
 							# remove from socketlist
 							self.socketList.remove(readySocket)
 							self.rootSockets.remove(readySocket)
-							self.socketList.remove(request.connection)
-							self.requests.remove(request)
-							# return response to client and close connection
-							request.sendResponse()
+
+							# Check if Location flag is set in CGI response
+							if request.checkReprocess():
+								# establish connection to root process
+								rootSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+								rootSocket.connect(self.unixSocketPath)
+
+								# forward request to root process, reinitialize response object
+								data = cPickle.dumps(httprequest.RequestResponseWrapper(request.request,httprequest.Response()))
+								data = str(len(data))+';'+data
+								rootSocket.send(data)
+
+								# append to socketlist
+								self.rootSockets.append(rootSocket)
+								self.socketList.append(rootSocket)
+								request.rootSocket = rootSocket
+							else:
+								self.socketList.remove(request.connection)
+								self.requests.remove(request)
+								request.generateResponseMessage()
+								# return response to client and close connection
+								request.sendResponse()
+								request.connection.close()
+
 							# close connection to root
 							readySocket.close()
 							break
 				else:
-					# initialize HTTP Request
+					# initialize HTTP Request, receive data from readySocket
 					request = httprequest.HttpRequest(readySocket)
-					# receive request data and parse it
-					request.receive()
 		
 					# just forward request to root process if syntax is valid
 					if request.checkValidity():
@@ -127,8 +147,12 @@ class SecureWebServer:
 						# establish connection to root process
 						rootSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 						rootSocket.connect(self.unixSocketPath)
-						# forward message to root process
-						rootSocket.send(request.request.message)
+
+						# forward request to root process, reinitialize response object
+						data = cPickle.dumps(httprequest.RequestResponseWrapper(request.request,httprequest.Response()))
+						data = str(len(data))+';'+data
+						rootSocket.send(data)
+
 						# append to socketlist
 						self.rootSockets.append(rootSocket)
 						self.socketList.append(rootSocket)
@@ -138,6 +162,7 @@ class SecureWebServer:
 						request.generateResponseMessage()
 						# return response to client and close connection
 						request.sendResponse()
+						readySocket.close()
 						# remove client from socketlist
 						self.socketList.remove(readySocket)
 

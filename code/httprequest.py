@@ -463,7 +463,10 @@ class HttpRequest:
 					# local redirect response (RFC: 6.2.2)
 					self.response.reprocess = True
 					newEnv = {}
-					newEnv['REDIRECT_URL'] = self.request.filepath[len(HttpRequest.DOCUMENT_ROOT):] + self.request.cgiPathInfo
+					if self.request.cgiPathInfo != None:
+						newEnv['REDIRECT_URL'] = self.request.filepath[len(HttpRequest.DOCUMENT_ROOT):] + self.request.cgiPathInfo
+					else:
+						newEnv['REDIRECT_URL'] = self.request.filepath[len(HttpRequest.DOCUMENT_ROOT):]
 					newEnv['REDIRECT_STATUS'] = str(self.response.statusCode)
 					# rename CGI environment variables
 					for key in self.request.cgiEnv.keys():
@@ -512,4 +515,20 @@ class HttpRequest:
                 p = subprocess.Popen([self.request.filepath],stdout=subprocess.PIPE,stdin=stdinput,env=self.request.cgiEnv)
 		return p.communicate()[0]
 
+
+	def checkReprocess(self):
+		#Location flag set in CGI script
+		if self.response.reprocess and self.response.getCGIHeader('Location') != None:
+			# CGI local redirect response (RFC 6.2.2)
+			curHost = self.request.host
+			curUri = self.request.uri
+			curQuery = self.request.query
+			self.parseURI(self.response.getCGIHeader('Location'))
+			# check for recursion, but may still happen
+			if self.request.host == curHost and self.request.uri == curUri and self.request.query == curQuery:
+				self.response.setError(500,'Internal Server Error','Status 500 - recursion in CGI script')
+				return False
+			return True
+		else:
+			return False
 
