@@ -62,9 +62,17 @@ class Response:
 		self.cgiHeaders = {}
 		self.statusCode = 200
 		self.statusMessage = 'OK'
-		self.body = ''
+		self.contentLength = 0
+		self.contentType = None
+
+		# message to be flushed to client
 		self.message = ''
+		# True when CGI local location redirect
 		self.reprocess = False
+		# True when the first chunks of data have been sent to client/listener, i.e. status, etc.
+		self.flushed = False
+		# Becomes true when last chunk of data was sent to listener
+		self.connectionClose = False
 
 	def getHeader(self,key):
 		if key.title() in self.headers:
@@ -89,11 +97,13 @@ class Response:
 		self.statusCode = errorCode
 		self.statusMessage = errorMessage
 		self.body = errorDocument
+		self.contentLength = len(errorDocument)
+		# TODO: GENERATE HEADER MESSAGE, remove BODY
 
 
 class HttpRequest:
 
-	SOCKET_BUF_SIZE = 4096
+	SOCKET_BUF_SIZE = 8192
 
 	SERVER_NAME = 'SWS/0.1'
 	SERVER_ADMIN = 'stefan@peerweb.it'
@@ -109,46 +119,38 @@ class HttpRequest:
 	# enabling this results to poor performance
 	FQDN_LOOKUP_ENABLED = False
 
-        def __init__ (self, connection, pickled=False):
+        def __init__ (self, connection):
 		self.connection = connection
 		self.tmpData = ''
-		self.bytessent = 0
 		self.requestHeader = ''
 		self.requestBody = ''
 		self.headerReceived = False
-		if not pickled:
-			# read request from connection
-			self.request = Request()
-			self.response = Response()
-			self.request.serverAddr = connection.getsockname()[0]
-			self.request.serverPort = connection.getsockname()[1]
-			self.request.remoteAddr = connection.getpeername()[0]
-			self.request.remotePort = connection.getpeername()[1]
-			if HttpRequest.FQDN_LOOKUP_ENABLED:
-				self.request.remoteFqdn = socket.getfqdn(self.request.remoteAddr)
-			else:
-				self.request.remoteFqdn = self.request.remoteAddr
-		else:
-			# unpickle request and response objects
-			self.unpickle()
+		self.request = Request()
+		self.response = Response()
 
-	def unpickle(self):
-		data = 'init'
-		msg = ''
-		msgLength = -1
-		while data != '':
-                        data = self.connection.recv(4096)
-                        msg = msg + data
-			m = re.match(r'(\d+);(.*)',msg,re.DOTALL)
-			if m != None and msgLength == -1:
-				msgLength = int(m.group(1))
-				msg = m.group(2)
-			if msgLength <= len(msg):
-				# all data received
-				break
+	def determineHostVars (self):
+		self.request.serverAddr = self.connection.getsockname()[0]
+		self.request.serverPort = self.connection.getsockname()[1]
+		self.request.remoteAddr = self.connection.getpeername()[0]
+		self.request.remotePort = self.connection.getpeername()[1]
+		if HttpRequest.FQDN_LOOKUP_ENABLED:
+			self.request.remoteFqdn = socket.getfqdn(self.request.remoteAddr)
+		else:
+			self.request.remoteFqdn = self.request.remoteAddr
+
+	def unpickle(self,msg):
 		wrapper = cPickle.loads(msg)
 		self.request = wrapper.request
 		self.response = wrapper.response
+
+
+	def pickle(self,newResponse=False):
+		response = self.response
+		if newResponse:
+			response = Response()
+		data = cPickle.dumps(RequestResponseWrapper(self.request,response))
+		return str(len(data))+';'+data
+	
 
 	# returns true when request was fully received
 	def receiveRequest(self):
@@ -262,12 +264,12 @@ class HttpRequest:
 			return False
 		return True
 
-	def getContentType(self):
+	def getContentTypeFromFile(self):
 		try:
 			mime = magic.Magic(mime=True)
 			mime_encoding = magic.Magic(mime_encoding=True)
-			contentType = mime.from_buffer(self.response.body)
-			charset = mime_encoding.from_buffer(self.response.body)
+			contentType = mime.from_file(self.request.filepath)
+			charset = mime_encoding.from_file(self.request.filepath)
 			if charset != 'binary':
 				return contentType + ';charset=' + charset
 			else:
@@ -313,20 +315,19 @@ class HttpRequest:
 			self.request.cgiEnv['HTTP_'+keys.replace('-','_').upper()] = self.request.headers[keys]
 
 
-	def generateResponseMessage(self):
+	def generateResponseHeaderMessage(self):
 		# generate response headers
 		self.response.setHeader('Date',strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime()))
 		self.response.setHeader('Server',HttpRequest.SERVER_NAME)
 		self.response.setHeader('Connection',HttpRequest.CONNECTION_TYPE)
 		
 		# determine contentlength
-		contentLength = len(self.response.body)
-		if contentLength > 0:
-			self.response.setHeader('Content-Length', str(contentLength))
+		if self.response.contentLength > 0:
+			self.response.setHeader('Content-Length', str(self.response.contentLength))
 
 		# set content-length if not a cgi script
 		if len(self.response.cgiHeaders) == 0:
-			self.response.setHeader('Content-Type', self.getContentType())
+			self.response.setHeader('Content-Type', self.response.contentType)
 		else:
 			# add cgi headers to response
 			for key in self.response.cgiHeaders.keys():
@@ -341,22 +342,20 @@ class HttpRequest:
 
 		self.response.message = m + '\r\n'
 
-		# HEAD request must not have a response body
-		if self.request.method != 'HEAD':
-			self.response.message = self.response.message + self.response.body
 
+	def flushResponseToClient(self):
+		byteswritten = self.connection.send(self.response.message)
+		self.response.message = self.response.message[byteswritten:]
+		# TODO: CLOSE CONNECTION
+		return len(self.response.message) == 0
 
-	def sendResponse(self,pickled=False):
-		if not pickled:
-			if self.bytessent == 0:
-				self.tmpData = self.response.message
-			byteswritten = self.connection.send(self.tmpData)
-			self.bytessent = self.bytessent + byteswritten
-			self.tmpData = self.tmpData[byteswritten:]
-			return len(self.tmpData) == 0
-		else:
-			self.connection.send(cPickle.dumps(RequestResponseWrapper(self.request,self.response)))
-			return True
+	def flushResponseToListener(self, closeConnection=False):
+		self.response.connectionClose = closeConnection
+		self.connection.send(self.pickle())
+		self.response.flushed = True
+		self.response.message = ''
+		if closeConnection:
+			self.connection.close()
 
 	def isJailedInto(self, jail, path):
 		return path.startswith(jail + sep) or path == jail
@@ -387,12 +386,35 @@ class HttpRequest:
 
 		# check if resource is a valid file
 		if os.path.isfile(self.request.filepath):
-			try:
-				self.response.body = self.getFileContent()
-			except:
-				self.response.setError(500,'Internal Server Error','Status 500 - Internal Server Error')
+#			try:
+				self.response.contentType = self.getContentTypeFromFile()
+				self.response.contentLength = os.path.getsize(self.request.filepath)
+				self.generateResponseHeaderMessage()
+				# HEAD request must not have a response body
+				if self.request.method != 'HEAD':
+					self.accessFile()
+				else:
+					self.flushResponseToListener(True)
+		#	except:
+		#		self.response.setError(500,'Internal Server Error','Status 500 - Internal Server Error')
+
 		else:
 			self.response.setError(404,'File Not Found','Status 404 - The file could not be found')
+
+
+	def accessFile(self):
+		f = file(self.request.filepath,'r')
+
+		data = f.read(HttpRequest.SOCKET_BUF_SIZE)
+		nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
+		while nextData:
+			self.response.message = self.response.message + data
+			self.flushResponseToListener()
+			data = nextData
+			nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
+		self.response.message = self.response.message + data
+		self.flushResponseToListener(True)
+		f.close()
 
 
 
@@ -482,6 +504,7 @@ class HttpRequest:
 				# redirect response
 				if location.startswith('/'):
 					# local redirect response (RFC: 6.2.2)
+					# TODO: CLOSE CONNECTION IN THIS CASE!!! flush(True)
 					self.response.reprocess = True
 					newEnv = {}
 					if self.request.cgiPathInfo != None:
@@ -508,14 +531,6 @@ class HttpRequest:
 
 		else:
 			self.response.setError(500,'Internal Server Error','Status 500 - CGI returned wrong response')
-			
-
-
-	def getFileContent(self):
-		f = open(self.request.filepath)
-		content = f.read()
-		f.close()
-		return content
 
 
 	def executeCGI(self):
