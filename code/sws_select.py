@@ -8,43 +8,30 @@ import subprocess
 import sys
 import cPickle
 import re
-import time
-
 
 import httprequest_select as httprequest
 
+# This class handles an unprivileged process, that raised out of the fork of the root process
+# It receives the HttpRequest object from the Listener Process
+# Afterwards it processes the request
 class UnprivilegedProcess:
 	
 	def __init__(self, connection, rootSocket):
 		# forked client process does not need a open root listening socket
 		rootSocket.close()
 
+		# initialize new Request object
 		request = httprequest.HttpRequest(connection)
 
-		data = 'init'
-		msg = ''
-		msgLength = -1
-		while data != '':
-                        data = connection.recv(httprequest.HttpRequest.SOCKET_BUF_SIZE)
-                        msg = msg + data
-			m = re.match(r'(\d+);(.*)',msg,re.DOTALL)
-			if m != None and msgLength == -1:
-				msgLength = int(m.group(1))
-				msg = m.group(2)
-			if msgLength <= len(msg):
-				# all data received
-				break
+		# receive Request from listener process
+		request.receiveRequestFromListener()
 
-		# retrieve request and unpickle it
-		request.unpickle(msg)
-
-		# check for validity of request
-		if request.checkValidity():
-
-			# request OK - process it, send response to listener and close connection at the end
-			request.process()
+		# process request, send response back to listener and close connection at the end
+		request.process()
 
 
+# This class represents the privileged root process, that listens on a UNIX socket and accepts new connections from the listener process
+# it creates a new unprivileged process for each connection
 class PrivilegedProcess:
 
 	def __init__ (self, webserver):
@@ -59,18 +46,21 @@ class PrivilegedProcess:
 		except OSError:
 			pass
 		rootListener.bind(webserver.unixSocketPath)
-		# an unprivileged process has to have access to the socket
+		# the listener process has to have access to the unix socket, therefore grant privileges to listener
 		os.chown(webserver.unixSocketPath,webserver.listenerUid,webserver.listenerGid)
 		rootListener.listen(SecureWebServer.LISTEN_QUEUE_SIZE)
 
 		while 1:
 			conn, addr = rootListener.accept()
+			# for each connection a new unprivileged process is created
 			unprivilegedProcess = Process (target=UnprivilegedProcess,args=(conn,rootListener,))
 			unprivilegedProcess.start()
 			conn.close()
 
 
-
+# This class creates the main architecture of the server
+# It basically represents the Listener Process, which handles new incoming connections, manages communication between processes and clients
+# Makes use of the select system call, i.e. epoll, to efficiently handle many connections simultaneously
 class SecureWebServer:
 
 	LISTEN_QUEUE_SIZE = 10
@@ -87,7 +77,7 @@ class SecureWebServer:
 		self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.listener.bind((self.host, self.port))
 		self.listener.listen(SecureWebServer.LISTEN_QUEUE_SIZE)
-		# disable blocking mode
+		# disable blocking mode of the listener socket
 		self.listener.setblocking(0)
 
 		# create root process which stays in background and forks child processes
@@ -98,45 +88,69 @@ class SecureWebServer:
 		os.setgid(self.listenerGid)
 		os.setuid(self.listenerUid)
 
+		# create an event poller in order to be able to handle simultaneous connections
 		epoll = select.epoll()
 		epoll.register(self.listener.fileno(), select.EPOLLIN)
 
 		try:
+			# contains HttpRequest objects for every client 
+			# keys are the filenos - file descriptors - of the connections to the clients
 			requests = {}
+
+			# contains arrays for every connection to the unprivileged process
+			# 1: fileno of connection to Root, 
+			# 2: fileno of connection to Client, 
+			# 3: pickled RequestResponseWrapper Object received from/sent to the unprivileged Process
+			# keys are the filedescriptors for the communication with the unprivileged process
 			rootRequests = {}
 
 			# serve forever
 			while 1:
+				# check for filedescriptors that are readable or writable
 				events = epoll.poll(1)
 				for fileno, event in events:
 					if fileno == self.listener.fileno():
 						# 1. new incoming connection
 						conn, addr = self.listener.accept()
 						conn.setblocking(0)
-						print 'new connection from',addr
+						#print 'new connection from',addr
 						epoll.register(conn.fileno(), select.EPOLLIN)
+						#print '1. register request:',conn.fileno()
+
 						# create new request and store it in list
 						request = httprequest.HttpRequest(conn)
+						# determines some environment variables (IP address, hostname, etc.)
 						request.determineHostVars()
 						requests[conn.fileno()] = request
 
 					elif event & select.EPOLLIN:
+						# fileno is readable
+
 						if fileno in rootRequests:
+							# fileno is a filedescriptor for communication with the unprivileged process
+
+							# check whether connection to client was shut down
+							if not rootRequests[fileno][1] in requests:
+								epoll.modify(fileno, 0)
+								#print 'shutdown connection to root:',fileno
+								rootRequests[fileno][0].shutdown(socket.SHUT_RDWR)
+								break
+
+							# receive part of the pickled message from the unprivileged process
 							msg = rootRequests[fileno][0].recv(httprequest.HttpRequest.SOCKET_BUF_SIZE)
-							rootRequests[fileno][3] = rootRequests[fileno][3] + msg
-							m = re.match(r'(\d+);(.*)',rootRequests[fileno][3],re.DOTALL)
+							rootRequests[fileno][2] = rootRequests[fileno][2] + msg
+							m = re.match(r'(\d+);(.*)',rootRequests[fileno][2],re.DOTALL)
 							if m != None:
 								msgLength = int(m.group(1))
 								msg = m.group(2)
 								if msgLength <= len(msg):
-									# message fully received
-									rootRequests[fileno][3] = msg[msgLength:]
+									# 4. response object fully received
+									rootRequests[fileno][2] = msg[msgLength:]
 									msg = msg[:msgLength]
 
-									# 4. receive everything thats currently available from root
 									request = requests[rootRequests[fileno][1]]
 									wrapper = cPickle.loads(msg)
-									# overwrite request and reponse objects just before the flush
+									# The first flush contains the whole header and a part of the body
 									if not wrapper.response.flushed:
 										request.response = wrapper.response
 										request.request = wrapper.request
@@ -145,36 +159,40 @@ class SecureWebServer:
 										request.response.message = request.response.message + wrapper.response.message
 										request.response.connectionClose = wrapper.response.connectionClose
 
-									# Check if Location flag is set in CGI response
+									# Check if Location flag is set in CGI response (local redirect)
 									if request.checkReprocess():
 	
 										# establish connection to root process
 										rootConn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 										rootConn.connect(self.unixSocketPath)
 										rootConn.setblocking(0)
-	
+										#print '4. register new root connection:',rootConn.fileno()
 										epoll.register(rootConn, select.EPOLLOUT)
-	
-										rootRequests[rootConn.fileno()] = [rootConn,rootRequests[fileno][1],request.pickle(True),'']
+
+										# update rootRequest array with new request data
+										rootRequests[rootConn.fileno()] = [rootConn,rootRequests[fileno][1],request.pickle(True)]
 
 									else:
 										# register client connection for poll out, since data is available
 										try:
+											#print '4. register client for pollout:',rootRequests[fileno][1]
 											epoll.register(rootRequests[fileno][1],select.EPOLLOUT)
 										except:
 											pass
 
 									if request.response.connectionClose:
-										# close connection to root
+										# close connection to unprivileged process
 										epoll.modify(fileno, 0)
+										#print '5. shutdown connection to root:',fileno
 										rootRequests[fileno][0].shutdown(socket.SHUT_RDWR)
 	
 						else:
 							# 2. ready to receive request data from client
 							request = requests[fileno]
 
-							if request.receiveRequest():
+							if request.receiveRequestFromClient():
 								# request fully received
+
 								# just forward request to root process if syntax is valid
 								if request.checkValidity():
 
@@ -182,27 +200,30 @@ class SecureWebServer:
 									rootConn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 									rootConn.connect(self.unixSocketPath)
 									rootConn.setblocking(0)
+									#print '2. register rootRequest:',rootConn.fileno(),' unregister request:',fileno
 
 									epoll.register(rootConn, select.EPOLLOUT)
 
-									# store request information in rootRequests array (connection to Root, connection to Client, Request, Response)
-									rootRequests[rootConn.fileno()] = [rootConn,fileno,request.pickle(True),'']
+									# store request information in rootRequests array
+									rootRequests[rootConn.fileno()] = [rootConn,fileno,request.pickle(True)]
 									
 									# unregister client, since no data to send to client is available jet
 									epoll.unregister(fileno)
+
 								else:
-									# error in request, modify to send error data to client
+									# syntax error in request, modify epoll fileno to send error data to client
 									epoll.modify(fileno, select.EPOLLOUT)
 
-
 					elif event & select.EPOLLOUT:
+						# fileno is writable
 
 						if fileno in rootRequests:
-							# 3. send to root process
+							# 3. forward request to root process
 							byteswritten = rootRequests[fileno][0].send(rootRequests[fileno][2])
 							rootRequests[fileno][2] = rootRequests[fileno][2][byteswritten:]
 
 							if len (rootRequests[fileno][2]) == 0:
+								#print '3. data sent to root:',fileno
 								# all data sent to root, modify to read response from root
 								epoll.modify(fileno, select.EPOLLIN)
 
@@ -215,25 +236,33 @@ class SecureWebServer:
 									# connection to root closed, so no more data
 									epoll.modify(fileno, 0)
 									try:
+										#print '6. shutdown connection to client:',fileno
 										request.connection.shutdown(socket.SHUT_RDWR)
 									except socket.error:
 										pass
 								else:
 									# there is more data that root has to send
 									epoll.unregister(fileno)
+									#print '4.1 unregister client connection:',fileno
 
 					elif event and select.EPOLLHUP:
+						# fileno hung up or shutdown requested
+						try:
+							epoll.unregister(fileno)
 
-						epoll.unregister(fileno)
-
-						if fileno in rootRequests:
-							rootRequests[fileno][0].close()
-							del rootRequests[fileno]
-						else:
-							requests[fileno].connection.close()	
-							del requests[fileno]
+							if fileno in rootRequests:
+								#print '7. unregister/close rootRequest:',fileno
+								rootRequests[fileno][0].close()
+								del rootRequests[fileno]
+							else:
+								#print '7. unregister/close requests:',fileno
+								requests[fileno].connection.close()	
+								del requests[fileno]
+						except socket.error:
+							pass
 
 		finally:
+			#print 'unregister listener'
 			epoll.unregister(self.listener.fileno())
 			epoll.close()
 			self.listener.close()

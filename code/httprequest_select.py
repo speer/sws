@@ -6,36 +6,52 @@ import subprocess
 import cPickle
 import socket
 import urllib
+import threading
 
 # not python standard lib - for mime type detection
 import magic
 
+# this class is a wrapper for the request and response object, in order to be pickled and sent over sockets
 class RequestResponseWrapper:
 
 	def __init__ (self, request, response):
 		self.request = request
 		self.response = response
 
+# this class represents a request object, i.e. a parsed version of the requestmessage
 class Request:
 
 	def __init__ (self):
+		# dictionary of header fields
 		self.headers = {}
+		# dictionary of environment variables provided to CGI scripts
 		self.cgiEnv = {}
 		# method (GET, HEAD, POST)
 		self.method = None
+		# request URI
 		self.uri = None
+		# filepath of the accessed resource
 		self.filepath = ''
+		# pathinfo variable for cgi scripts
 		self.cgiPathInfo = None
-		self.host = None
-		self.remoteAddr = None
-		self.remoteFqdn = None
-		self.remotePort = None
-		self.serverPort = None
-		self.serverAddr = None
+		# used protocol in the request (HTTP/1.X)
 		self.protocol = None
+		# query part of the URI
 		self.query = ''
+		# body of the request
 		self.body = ''
-		self.message = ''
+		# specified hostname (either host header or absolute request uri)
+		self.host = None
+		# ip address of the client
+		self.remoteAddr = None
+		# fully qualified domain name of the client
+		self.remoteFqdn = None
+		# remote port (of the client)
+		self.remotePort = None
+		# server port
+		self.serverPort = None
+		# ip address of the server
+		self.serverAddr = None
 
 	def getHeader(self,key):
 		if key.title() in self.headers:
@@ -55,14 +71,21 @@ class Request:
 		return contentLength
 
 
+# this class represents a response object from which a HTTP response message can be created
 class Response:
 	
 	def __init__ (self):
+		# dictionary of header fields
 		self.headers = {}
+		# dictionary of header fields provided in the response of a cgi script
 		self.cgiHeaders = {}
+		# statuscode of the request (HTTP/1.1 200 OK)
 		self.statusCode = 200
+		# statusMessage of the request (HTTP/1.1 200 OK)
 		self.statusMessage = 'OK'
+		# content-length of the response
 		self.contentLength = 0
+		# content-type of the response
 		self.contentType = None
 
 		# message to be flushed to client
@@ -92,15 +115,8 @@ class Response:
 	def setCGIHeader(self,key,value):
 		self.cgiHeaders[key.title()] = value
 
-	def setError(self, errorCode, errorMessage, errorDocument):
-		self.cgiHeaders = {}
-		self.statusCode = errorCode
-		self.statusMessage = errorMessage
-		self.body = errorDocument
-		self.contentLength = len(errorDocument)
-		# TODO: GENERATE HEADER MESSAGE, remove BODY
 
-
+# This class contains the main HTTP functionality (parsing, etc.)
 class HttpRequest:
 
 	SOCKET_BUF_SIZE = 8192
@@ -110,12 +126,20 @@ class HttpRequest:
 	DOCUMENT_ROOT = '/home/stefan/sws/docs'
 	CGI_ROOT = 'cgi-bin'
 	DIRECTORY_INDEX = ['index.html','index.php','home.html','env.pl']
+	ERRORDOCUMENT_ROOT = '/home/stefan/sws/errordocs'
+	ERRORDOCUMENTS = {
+		403:{'msg':'Forbidden','file':'403.html','defaulttxt':'Status 403 - Forbidden. You are not allowed to access this resource.'},
+		404:{'msg':'Not Found','file':'404.html','defaulttxt':'Status 404 - File Not Found'},
+		500:{'msg':'Internal Server Error','file':'500.html','defaulttxt':'Status 500 - Internal Server Error'}
+	}
 
 	CONNECTION_TYPE = 'close'
 	CGI_PROTOCOL = 'CGI/1.1'
 	HTTP_PROTOCOL = 'HTTP/1.1'
 	ACCEPTED_PROTOCOLS = ['HTTP/1.0','HTTP/1.1']
 	ACCEPTED_REQUEST_TYPES = ['GET','HEAD','POST']
+	CGI_SCRIPT_TIMEOUT = 5
+
 	# enabling this results to poor performance
 	FQDN_LOOKUP_ENABLED = False
 
@@ -128,6 +152,7 @@ class HttpRequest:
 		self.request = Request()
 		self.response = Response()
 
+	# determines connection specific variables
 	def determineHostVars (self):
 		self.request.serverAddr = self.connection.getsockname()[0]
 		self.request.serverPort = self.connection.getsockname()[1]
@@ -143,23 +168,44 @@ class HttpRequest:
 		self.request = wrapper.request
 		self.response = wrapper.response
 
-
 	def pickle(self,newResponse=False):
 		response = self.response
 		if newResponse:
 			response = Response()
 		data = cPickle.dumps(RequestResponseWrapper(self.request,response))
 		return str(len(data))+';'+data
+
+
+	# receives a pickled request/response wrapper object from the listener and unpickles it
+	def receiveRequestFromListener(self):
+		data = 'init'
+		msg = ''
+		msgLength = -1
+		while data != '':
+                        data = self.connection.recv(HttpRequest.SOCKET_BUF_SIZE)
+                        msg = msg + data
+			m = re.match(r'(\d+);(.*)',msg,re.DOTALL)
+			if m != None and msgLength == -1:
+				msgLength = int(m.group(1))
+				msg = m.group(2)
+			if msgLength <= len(msg):
+				# all data received
+				break
+
+		# unpickle request
+		self.unpickle(msg)
 	
 
-	# returns true when request was fully received
-	def receiveRequest(self):
+	# receives a request message from the client
+	# can be called several times and returns true when request was fully received
+	def receiveRequestFromClient(self):
 		if not self.headerReceived:
 			# receive request header
 			data = self.connection.recv(HttpRequest.SOCKET_BUF_SIZE)
 			self.tmpData = self.tmpData + data
 			m = re.match(r'((.+)\r\n\r\n)(.*)',self.tmpData,re.DOTALL)
 			if m != None:
+				# headers fully received
 				self.requestHeader = self.tmpData[:self.tmpData.find('\r\n\r\n')]
 				self.requestBody = self.tmpData[self.tmpData.find('\r\n\r\n')+4:]
 				return self.parseHeader()
@@ -171,16 +217,19 @@ class HttpRequest:
 			self.requestBody = self.requestBody + self.connection.recv(HttpRequest.SOCKET_BUF_SIZE)
 			return self.checkRequestBodyReceived()
 
+
+	# returns true if the request body was fully received, otherwise false
 	def checkRequestBodyReceived(self):
 		if len(self.requestBody) >= self.request.getContentLength():
 			self.request.body = self.requestBody
-			self.request.message = self.requestHeader + self.request.body
 			return True
 		else:
 			return False
 		
 
-	# when request is fully received: returns true
+	# parses the header message
+	# if there was a syntax error (400) or the request (incl.) body was fully received, it returns true
+	# if the request header syntax is OK, but just parts of the body arrived, it returns false
 	def parseHeader(self):
 		self.headerReceived = True
 		self.requestHeader = self.requestHeader.lstrip()
@@ -193,7 +242,7 @@ class HttpRequest:
 				# request line
 				words = line.split(' ')
 				if len(words) != 3:
-					self.response.setError(400,'Bad Request','Status 400 - Bad Request Line')
+					self.setBadRequestError('Status 400 - Bad Request Line')
 					return True
 				self.request.method = words[0].upper()
 				self.parseURI(words[1])
@@ -206,7 +255,7 @@ class HttpRequest:
 				# header line
 				pos = line.find(':')
 				if pos <= 0 or pos >= len(line)-1:
-					self.response.setError(400,'Bad Request','Status 400 - Bad Header')
+					self.setBadRequestError('Status 400 - Bad Header')
 					return True
 				key = line[0:pos].strip()
 				value = line[pos+1:len(line)].strip()
@@ -224,10 +273,10 @@ class HttpRequest:
 		if self.request.method == 'POST' and self.request.getContentLength() > 0:
 			return self.checkRequestBodyReceived()
 		
-		self.request.message = self.requestHeader
 		return True
-		
 
+		
+	# parses an URI (ex. GET / HTTP/1.1) and sets uri, query, host and filepath variables
 	def parseURI(self,uri):
 		if re.match('[hH][tT][tT][pP][sS]?://',uri) == None:
 			# absolute path - host determined afterwards
@@ -250,26 +299,30 @@ class HttpRequest:
 		self.request.filepath = path.abspath(HttpRequest.DOCUMENT_ROOT + sep + self.request.uri)
 
 
+	# checks if the request is valid so far, or if there are already syntax errors somewhere
 	def checkValidity(self):
 		if self.response.statusCode != 200:
 			return False
 		if self.request.method not in HttpRequest.ACCEPTED_REQUEST_TYPES:
-			self.response.setError(400,'Bad Request','Status 400 - Command not supported')
+			self.setBadRequestError('Status 400 - Command not supported')
 			return False
 		if self.request.protocol not in HttpRequest.ACCEPTED_PROTOCOLS:
-			self.response.setError(400,'Bad Request','Status 400 - Version not supported')
+			self.setBadRequestError('Status 400 - Version not supported')
 			return False
 		if self.request.host == None:
-			self.response.setError(400,'Bad Request','Status 400 - No Host specified')
+			self.setBadRequestError('Status 400 - No Host specified')
 			return False
 		return True
 
-	def getContentTypeFromFile(self):
+
+	# uses the magic library to determine the mimetype of a file
+	# it does not look at the file extension, but at the content of the file
+	def getContentTypeFromFile(self,filename):
 		try:
 			mime = magic.Magic(mime=True)
 			mime_encoding = magic.Magic(mime_encoding=True)
-			contentType = mime.from_file(self.request.filepath)
-			charset = mime_encoding.from_file(self.request.filepath)
+			contentType = mime.from_file(filename)
+			charset = mime_encoding.from_file(filename)
 			if charset != 'binary':
 				return contentType + ';charset=' + charset
 			else:
@@ -277,6 +330,8 @@ class HttpRequest:
 		except Exception:
 			return 'application/octet-stream'
 
+
+	# determines and sets environment variables, provided to cgi scripts
 	def generateCGIEnvironment(self):
 		contentLength = self.request.getContentLength()
 		if contentLength > 0:
@@ -310,11 +365,12 @@ class HttpRequest:
 		self.request.cgiEnv['REMOTE_PORT'] = str(self.request.remotePort)
 		self.request.cgiEnv['PATH'] = os.environ['PATH']
 		
-		# http header to environment variable
+		# map all http headers to environment variables
 		for keys in self.request.headers.keys():
 			self.request.cgiEnv['HTTP_'+keys.replace('-','_').upper()] = self.request.headers[keys]
 
 
+	# generates the header message of the response, considering status line and all response header fields
 	def generateResponseHeaderMessage(self):
 		# generate response headers
 		self.response.setHeader('Date',strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime()))
@@ -343,38 +399,105 @@ class HttpRequest:
 		self.response.message = m + '\r\n'
 
 
-	def flushResponseToClient(self):
-		byteswritten = self.connection.send(self.response.message)
-		self.response.message = self.response.message[byteswritten:]
-		# TODO: CLOSE CONNECTION
-		return len(self.response.message) == 0
+	# appends the body to the response message if the request command was not HEAD
+	def appendResponseMessageBody(self,body):
+		if self.request.method != 'HEAD':
+			self.response.message = self.response.message + body
 
+
+	# sends an error back to the listener process
+	# if an errorMessage is provided, this message will be shown instead of the errorDocument
+	def sendError(self, errorCode, errorMessage=None):
+		self.response.cgiHeaders = {}
+		if errorCode in HttpRequest.ERRORDOCUMENTS:
+			self.response.statusCode = errorCode
+		else:
+			self.response.statusCode = 500
+		self.response.statusMessage = HttpRequest.ERRORDOCUMENTS[self.response.statusCode]['msg']
+
+		errorFile = path.abspath(HttpRequest.ERRORDOCUMENT_ROOT + sep + HttpRequest.ERRORDOCUMENTS[self.response.statusCode]['file'])
+
+		# check if errordocument is a valid file and no other message has been set
+		if errorMessage == None and self.isJailedInto(HttpRequest.ERRORDOCUMENT_ROOT,errorFile) and os.path.isfile(errorFile):
+			try:
+				self.response.contentType = self.getContentTypeFromFile(errorFile)
+				self.response.contentLength = os.path.getsize(errorFile)
+				self.generateResponseHeaderMessage()
+				# if it is a HEAD request, there is no need to access the errordocument
+				if self.request.method != 'HEAD':
+					self.accessFile(errorFile)
+				else:
+					self.flushResponseToListener(True)
+				return
+			except:
+				if self.response.flushed:
+					return
+				# if not flushed, try to flush standard message (defaulttxt)
+
+		self.response.contentType = 'text/plain'
+		if errorMessage == None:
+			errorMessage = HttpRequest.ERRORDOCUMENTS[self.response.statusCode]['defaulttxt']
+		self.response.contentLength = len(errorMessage)
+		self.generateResponseHeaderMessage()
+		self.appendResponseMessageBody(errorMessage)
+		self.flushResponseToListener(True)
+
+
+	# prepares an 400 Bad Request response, showing the provided errorMessage
+	def setBadRequestError(self, errorMessage):
+		self.response.statusCode = 400
+		self.response.statusMessage = 'Bad Request'
+		self.response.contentType = 'text/plain'
+		self.response.contentLength = len(errorMessage)
+		self.generateResponseHeaderMessage()
+		self.response.connectionClose = True
+		self.appendResponseMessageBody(errorMessage)
+
+
+	# sends the response message to the client
+	# returns true when the whole message was sent
+	def flushResponseToClient(self):
+		try:
+			byteswritten = self.connection.send(self.response.message)
+			self.response.message = self.response.message[byteswritten:]
+			return len(self.response.message) == 0
+		except:
+			self.response.connectionClose = True
+			return True
+
+
+	# sends a pickled request/response wrapper object to the listener process
+	# if closeConnection is set, that means that the connection will be closed after sending
 	def flushResponseToListener(self, closeConnection=False):
-		self.response.connectionClose = closeConnection
-		self.connection.send(self.pickle())
-		self.response.flushed = True
-		self.response.message = ''
-		if closeConnection:
+		try:
+			self.response.connectionClose = closeConnection
+			self.connection.send(self.pickle())
+			self.response.flushed = True
+			self.response.message = ''
+			if closeConnection:
+				self.connection.close()
+		except:
 			self.connection.close()
 
+
+	# checks whether path is jailed into the jail
 	def isJailedInto(self, jail, path):
 		return path.startswith(jail + sep) or path == jail
 
 
+	# processes the request, i.e. determines whether a CGI script or a normal resource was accessed
 	def process (self):
 		# check if resource is inside the documentroot (jail)
 		if self.isJailedInto(HttpRequest.DOCUMENT_ROOT, self.request.filepath):
-
 			# check if resource is a cgi script
 			if self.isJailedInto(HttpRequest.DOCUMENT_ROOT + sep + HttpRequest.CGI_ROOT, self.request.filepath):
 				self.processCGI()
 			else:
 				self.processDocument()
-
 		else:
-			self.response.setError(403,'Forbidden','Status 403 - Forbidden')
+			self.sendError(403)
 
-
+	# processes a normal resource request
 	def processDocument(self):
 		# check directoryIndex if path is a directory
 		if os.path.isdir(self.request.filepath):
@@ -386,38 +509,52 @@ class HttpRequest:
 
 		# check if resource is a valid file
 		if os.path.isfile(self.request.filepath):
-#			try:
-				self.response.contentType = self.getContentTypeFromFile()
+			try:
+				self.response.contentType = self.getContentTypeFromFile(self.request.filepath)
 				self.response.contentLength = os.path.getsize(self.request.filepath)
 				self.generateResponseHeaderMessage()
-				# HEAD request must not have a response body
+				# HEAD request must not have a response body, no need to access file
 				if self.request.method != 'HEAD':
-					self.accessFile()
+					self.accessFile(self.request.filepath)
 				else:
 					self.flushResponseToListener(True)
-		#	except:
-		#		self.response.setError(500,'Internal Server Error','Status 500 - Internal Server Error')
+			except:
+				self.sendError(500)
 
+		# if a directory is accessed, deliver 403: Forbidden error
+		elif os.path.isdir(self.request.filepath):
+			self.sendError(403)
+		# else deliver a 404: Not Found error
 		else:
-			self.response.setError(404,'File Not Found','Status 404 - The file could not be found')
+			self.sendError(404)
 
 
-	def accessFile(self):
-		f = file(self.request.filepath,'r')
+	# accesses a resource and sends the content back to the listener in chunks of data, i.e. not all at once
+	# at the last "flush" the connection to the listener will be closed
+	def accessFile(self, filename):
+		f = file(filename,'r')
+
+		# check owner of the file
+		st = os.stat(filename)
+		# remove privileges
+		os.setgid(st.st_gid)
+		os.setuid(st.st_uid)
 
 		data = f.read(HttpRequest.SOCKET_BUF_SIZE)
 		nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
 		while nextData:
 			self.response.message = self.response.message + data
+			# flush data part to listener and keep connection open
 			self.flushResponseToListener()
 			data = nextData
 			nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
 		self.response.message = self.response.message + data
+		# flush last data part to listener and close connection
 		self.flushResponseToListener(True)
 		f.close()
 
 
-
+	# processes a CGI script request
 	def processCGI(self):
 		# determine path (PATH_INFO, PATH_TRANSLATE)
 		cgiAbsRoot = HttpRequest.DOCUMENT_ROOT + sep + HttpRequest.CGI_ROOT
@@ -444,24 +581,54 @@ class HttpRequest:
 
 		# check if resource is a valid file
 		if os.path.isfile(self.request.filepath):
-			if 1:
-		#	try:
+			try:
 				# check owner of the file
 				st = os.stat(self.request.filepath)
 				# remove privileges
 				os.setgid(st.st_gid)
 				os.setuid(st.st_uid)
-				# check if resource is a cgi script
-				self.generateCGIresponse(self.executeCGI())
-		#	except:
-		#		self.response.setError(500,'Internal Server Error','Status 500 - Internal Server Error')
+
+				# check whether resource is an executable file
+		        	if not os.access(self.request.filepath, os.X_OK):
+					self.sendError(500)
+					return
+
+				# check if resource is owned by someone except root
+				st = os.stat(self.request.filepath)
+				if st.st_uid == 0:
+					self.sendError(500)
+					return
+
+				# generate environment variables for the CGI script
+				self.generateCGIEnvironment()
+
+				# execute cgi script - abort timeout of n seconds
+				success, cgiBody = self.parseCGIResponse(CGIExecutor(self.request).execute(HttpRequest.CGI_SCRIPT_TIMEOUT))
+
+				# if execution was successful and no error was sent already
+				if success:
+					self.response.contentLength = len(cgiBody)
+					self.generateResponseHeaderMessage()
+					self.appendResponseMessageBody(cgiBody)
+					self.flushResponseToListener(True)
+				
+			except:
+				# Exception will be raised by the CGIExecutor if CGI Script takes to much time
+				self.sendError(500,'Status 500 - CGI script aborted because of timeout')
+
+		elif os.path.isdir(self.request.filepath):
+			# if resource is a directory, send 403: Forbidden error
+			self.sendError(403)
 		else:
-			self.response.setError(404,'File Not Found','Status 404 - The file could not be found')
+			# send 404: Not Found error if resource is not found
+			self.sendError(404)
 
 
-
-	def generateCGIresponse(self,document):
+	# parses the response of the CGI script 
+	# returns the pair (success,cgiBody)
+	def parseCGIResponse(self,document):
 		document = document.lstrip()
+		cgiBody = ''
 		m = re.match(r'((.+)\n\n)(.*)',document,re.DOTALL)
 		if m != None:
 			header = document[:document.find('\n\n')]
@@ -473,14 +640,15 @@ class HttpRequest:
 				line = re.sub('\s{2,}', ' ', line)
 				pos = line.find(':')
 				if pos <= 0 or pos >= len(line)-1:
-					self.response.setError(500,'Internal Server Error','Status 500 - Bad Header in CGI response')
-					return
+					self.sendError(500,'Status 500 - Bad Header in CGI response')
+					return (False,'')
 				key = line[0:pos].strip()
 				value = line[pos+1:len(line)].strip()
 				self.response.setCGIHeader(key,value)
 
 			if len(self.response.cgiHeaders) == 0:
-				self.response.setError(500,'Internal Server Error','Status 500 - CGI Script has no headers')
+				self.sendError(500,'Status 500 - CGI Script has no headers')
+				return (False,'')
 
 			location = self.response.getCGIHeader('Location')
 			if location == None:
@@ -488,10 +656,10 @@ class HttpRequest:
 				if body != None and body != '':
 					if self.response.getCGIHeader('Content-Type') == None:
 						# content-type must be specified
-						self.response.setError(500,'Internal Server Error','Status 500 - CGI Script must specify content type')
-						return
+						self.sendError(500,'Status 500 - CGI Script must specify content type')
+						return (False,'')
 
-					self.response.body = body
+					cgiBody = body
 
 				# check for status header field
 				if self.response.getCGIHeader('Status') != None:
@@ -504,7 +672,6 @@ class HttpRequest:
 				# redirect response
 				if location.startswith('/'):
 					# local redirect response (RFC: 6.2.2)
-					# TODO: CLOSE CONNECTION IN THIS CASE!!! flush(True)
 					self.response.reprocess = True
 					newEnv = {}
 					if self.request.cgiPathInfo != None:
@@ -525,32 +692,20 @@ class HttpRequest:
 					if body != None and body != '':
 						if self.response.getCGIHeader('Content-Type') == None:
 							# content-type must be specified
-							self.response.setError(500,'Internal Server Error','Status 500 - CGI Script must specify content type')
-							return
-						self.response.body = body
-
+							self.sendError(500,'Status 500 - CGI Script must specify content type')
+							return (False,'')
+						# success
+						cgiBody = body
 		else:
-			self.response.setError(500,'Internal Server Error','Status 500 - CGI returned wrong response')
+			self.sendError(500,'Status 500 - CGI returned wrong response')
+			return (False,'')
+
+		return (True,cgiBody)
 
 
-	def executeCGI(self):
-		# check whether resource is an executable file
-        	if not os.access(self.request.filepath, os.X_OK):
-			raise IOError
-
-		# check if resource is owned by someone except root
-		st = os.stat(self.request.filepath)
-		if st.st_uid == 0:
-			raise Exception
-
-		# call cgi script, if there is a body it is provided as input stream, pass environment variables
-		self.generateCGIEnvironment()
-	        p = subprocess.Popen([self.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,env=self.request.cgiEnv)
-		if self.request.body != '':
-			p.stdin.write(self.request.body)
-		return p.communicate()[0]
-
-
+	# checks whether the CGI response contained the Location header and it is a local redirect response
+	# returns true if that is the case, otherwise false
+	# additionally it monitors eventual endless loops that might occur if a cgiscript forwards to itself
 	def checkReprocess(self):
 		#Location flag set in CGI script
 		if self.response.reprocess and self.response.getCGIHeader('Location') != None:
@@ -561,9 +716,48 @@ class HttpRequest:
 			self.parseURI(self.response.getCGIHeader('Location'))
 			# check for recursion, but may still happen
 			if self.request.host == curHost and self.request.uri == curUri and self.request.query == curQuery:
-				self.response.setError(500,'Internal Server Error','Status 500 - recursion in CGI script')
+				self.sendError(500,'Status 500 - recursion in CGI script')
 				return False
 			return True
 		else:
 			return False
 
+
+# This class provides an execution environment to the CGI script, which monitors the time it takes and aborts the script if it takes too long
+class CGIExecutor():
+
+	def __init__ (self, request):
+		# Script process
+		self.process = None
+		# Request object
+		self.request = request
+		# Response of the CGI script
+		self.response = None
+
+
+	# executes the CGI script in a thread, which creates a new process that executes the requested scriptfile
+	# the thread will cause the process to terminate after a timeout
+	def execute (self, timeout=30):
+		
+		# executed in a separate thread
+		def cgiThread():
+			# creates a new process, running the script
+	        	self.process = subprocess.Popen([self.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,env=self.request.cgiEnv)
+
+			# eventual POST data goes to stdin
+			if self.request.body != '':
+				self.process.stdin.write(self.request.body)
+
+			# the response is on standardoutput
+			self.response = self.process.communicate()[0]
+
+		thread = threading.Thread(target=cgiThread)
+		thread.start()
+		thread.join(timeout)
+		# if thread is still alive after timeout means that the script took to long
+		if thread.is_alive():
+			self.process.terminate()
+			thread.join()
+			raise Exception
+
+		return self.response
