@@ -256,7 +256,7 @@ class SecureWebServer:
 								del rootRequests[fileno]
 							else:
 								#print '7. unregister/close requests:',fileno
-								requests[fileno].connection.close()	
+								requests[fileno].connection.close()
 								del requests[fileno]
 						except socket.error:
 							pass

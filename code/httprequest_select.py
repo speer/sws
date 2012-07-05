@@ -144,13 +144,21 @@ class HttpRequest:
 	FQDN_LOOKUP_ENABLED = False
 
         def __init__ (self, connection):
+		# Socket connection, either to client or to listener
 		self.connection = connection
-		self.tmpData = ''
-		self.requestHeader = ''
-		self.requestBody = ''
-		self.headerReceived = False
+		# True when the connection was closed
+		self.connectionClosed = False
+		# request and response objects
 		self.request = Request()
 		self.response = Response()
+		# temporary received/sent data (used for select system call)
+		self.tmpData = ''
+		# received request header
+		self.requestHeader = ''
+		# received request body
+		self.requestBody = ''
+		# True when the request header was successfully received 
+		self.headerReceived = False
 
 	# determines connection specific variables
 	def determineHostVars (self):
@@ -476,8 +484,10 @@ class HttpRequest:
 			self.response.message = ''
 			if closeConnection:
 				self.connection.close()
+				self.connectionClosed = True
 		except:
 			self.connection.close()
+			self.connectionClosed = True
 
 
 	# checks whether path is jailed into the jail
@@ -542,7 +552,7 @@ class HttpRequest:
 
 		data = f.read(HttpRequest.SOCKET_BUF_SIZE)
 		nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
-		while nextData:
+		while nextData and not self.connectionClosed:
 			self.response.message = self.response.message + data
 			# flush data part to listener and keep connection open
 			self.flushResponseToListener()
@@ -603,7 +613,7 @@ class HttpRequest:
 				self.generateCGIEnvironment()
 
 				# execute cgi script - abort timeout of n seconds
-				success, cgiBody = self.parseCGIResponse(CGIExecutor(self.request).execute(HttpRequest.CGI_SCRIPT_TIMEOUT))
+				success, cgiBody = self.parseCGIResponse(CGIExecutor(self).execute(HttpRequest.CGI_SCRIPT_TIMEOUT))
 
 				# if execution was successful and no error was sent already
 				if success:
@@ -729,7 +739,7 @@ class CGIExecutor():
 	def __init__ (self, request):
 		# Script process
 		self.process = None
-		# Request object
+		# HttpRequest object
 		self.request = request
 		# Response of the CGI script
 		self.response = None
@@ -742,11 +752,11 @@ class CGIExecutor():
 		# executed in a separate thread
 		def cgiThread():
 			# creates a new process, running the script
-	        	self.process = subprocess.Popen([self.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,env=self.request.cgiEnv)
+	        	self.process = subprocess.Popen([self.request.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,env=self.request.request.cgiEnv)
 
 			# eventual POST data goes to stdin
-			if self.request.body != '':
-				self.process.stdin.write(self.request.body)
+			if self.request.request.body != '':
+				self.process.stdin.write(self.request.request.body)
 
 			# the response is on standardoutput
 			self.response = self.process.communicate()[0]
