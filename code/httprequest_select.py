@@ -119,31 +119,20 @@ class Response:
 # This class contains the main HTTP functionality (parsing, etc.)
 class HttpRequest:
 
-	SOCKET_BUF_SIZE = 8192
-
 	SERVER_NAME = 'SWS/0.1'
-	SERVER_ADMIN = 'stefan@peerweb.it'
-	DOCUMENT_ROOT = '/home/stefan/sws/docs'
-	CGI_ROOT = 'cgi-bin'
-	DIRECTORY_INDEX = ['index.html','index.php','home.html','env.pl']
-	ERRORDOCUMENT_ROOT = '/home/stefan/sws/errordocs'
-	ERRORDOCUMENTS = {
-		403:{'msg':'Forbidden','file':'403.html','defaulttxt':'Status 403 - Forbidden. You are not allowed to access this resource.'},
-		404:{'msg':'Not Found','file':'404.html','defaulttxt':'Status 404 - File Not Found'},
-		500:{'msg':'Internal Server Error','file':'500.html','defaulttxt':'Status 500 - Internal Server Error'}
-	}
-
-	CONNECTION_TYPE = 'close'
 	CGI_PROTOCOL = 'CGI/1.1'
 	HTTP_PROTOCOL = 'HTTP/1.1'
 	ACCEPTED_PROTOCOLS = ['HTTP/1.0','HTTP/1.1']
 	ACCEPTED_REQUEST_TYPES = ['GET','HEAD','POST']
-	CGI_SCRIPT_TIMEOUT = 5
 
-	# enabling this results to poor performance
-	FQDN_LOOKUP_ENABLED = False
+	SERVER_ADMIN = 'stefan@peerweb.it'
+	DOCUMENT_ROOT = '/home/stefan/sws/docs'
+	CGI_ROOT = 'cgi-bin'
+	DIRECTORY_INDEX = ['index.html','index.php','home.html','env.pl']
 
-        def __init__ (self, connection):
+        def __init__ (self, connection, config):
+		# object which contains the configuration of the server
+		self.config = config
 		# Socket connection, either to client or to listener
 		self.connection = connection
 		# True when the connection was closed
@@ -166,7 +155,7 @@ class HttpRequest:
 		self.request.serverPort = self.connection.getsockname()[1]
 		self.request.remoteAddr = self.connection.getpeername()[0]
 		self.request.remotePort = self.connection.getpeername()[1]
-		if HttpRequest.FQDN_LOOKUP_ENABLED:
+		if self.config.configurations['hostnamelookups']:
 			self.request.remoteFqdn = socket.getfqdn(self.request.remoteAddr)
 		else:
 			self.request.remoteFqdn = self.request.remoteAddr
@@ -190,7 +179,7 @@ class HttpRequest:
 		msg = ''
 		msgLength = -1
 		while data != '':
-                        data = self.connection.recv(HttpRequest.SOCKET_BUF_SIZE)
+                        data = self.connection.recv(self.config.configurations['socketbuffersize'])
                         msg = msg + data
 			m = re.match(r'(\d+);(.*)',msg,re.DOTALL)
 			if m != None and msgLength == -1:
@@ -209,7 +198,7 @@ class HttpRequest:
 	def receiveRequestFromClient(self):
 		if not self.headerReceived:
 			# receive request header
-			data = self.connection.recv(HttpRequest.SOCKET_BUF_SIZE)
+			data = self.connection.recv(self.config.configurations['socketbuffersize'])
 			self.tmpData = self.tmpData + data
 			m = re.match(r'((.+)\r\n\r\n)(.*)',self.tmpData,re.DOTALL)
 			if m != None:
@@ -222,7 +211,7 @@ class HttpRequest:
 			return False
 		else:
 			# receive request body
-			self.requestBody = self.requestBody + self.connection.recv(HttpRequest.SOCKET_BUF_SIZE)
+			self.requestBody = self.requestBody + self.connection.recv(self.config.configurations['socketbuffersize'])
 			return self.checkRequestBodyReceived()
 
 
@@ -383,7 +372,7 @@ class HttpRequest:
 		# generate response headers
 		self.response.setHeader('Date',strftime("%a, %d %b %Y %H:%M:%S GMT", gmtime()))
 		self.response.setHeader('Server',HttpRequest.SERVER_NAME)
-		self.response.setHeader('Connection',HttpRequest.CONNECTION_TYPE)
+		self.response.setHeader('Connection','close')
 		
 		# determine contentlength
 		if self.response.contentLength > 0:
@@ -417,34 +406,37 @@ class HttpRequest:
 	# if an errorMessage is provided, this message will be shown instead of the errorDocument
 	def sendError(self, errorCode, errorMessage=None):
 		self.response.cgiHeaders = {}
-		if errorCode in HttpRequest.ERRORDOCUMENTS:
+		if errorCode in self.config.configurations['errordocument'].keys():
 			self.response.statusCode = errorCode
 		else:
 			self.response.statusCode = 500
-		self.response.statusMessage = HttpRequest.ERRORDOCUMENTS[self.response.statusCode]['msg']
+		self.response.statusMessage = self.config.configurations['errordocument'][self.response.statusCode]['msg']
 
-		errorFile = path.abspath(HttpRequest.ERRORDOCUMENT_ROOT + sep + HttpRequest.ERRORDOCUMENTS[self.response.statusCode]['file'])
+		errorFile = self.config.configurations['errordocument'][self.response.statusCode]['file']
+		errorRoot = self.config.configurations['errordocumentroot']
+		if errorFile != None and errorMessage == None:
+			errorFile = path.abspath(errorRoot + sep + errorFile)
 
-		# check if errordocument is a valid file and no other message has been set
-		if errorMessage == None and self.isJailedInto(HttpRequest.ERRORDOCUMENT_ROOT,errorFile) and os.path.isfile(errorFile):
-			try:
-				self.response.contentType = self.getContentTypeFromFile(errorFile)
-				self.response.contentLength = os.path.getsize(errorFile)
-				self.generateResponseHeaderMessage()
-				# if it is a HEAD request, there is no need to access the errordocument
-				if self.request.method != 'HEAD':
-					self.accessFile(errorFile)
-				else:
-					self.flushResponseToListener(True)
-				return
-			except:
-				if self.response.flushed:
+			# check if errordocument is a valid file and no other message has been set
+			if  self.isJailedInto(errorRoot,errorFile) and os.path.isfile(errorFile):
+				try:
+					self.response.contentType = self.getContentTypeFromFile(errorFile)
+					self.response.contentLength = os.path.getsize(errorFile)
+					self.generateResponseHeaderMessage()
+					# if it is a HEAD request, there is no need to access the errordocument
+					if self.request.method != 'HEAD':
+						self.accessFile(errorFile)
+					else:
+						self.flushResponseToListener(True)
 					return
-				# if not flushed, try to flush standard message (defaulttxt)
+				except:
+					if self.response.flushed:
+						return
+					# if not flushed, try to flush standard message (defaulttxt)
 
 		self.response.contentType = 'text/plain'
 		if errorMessage == None:
-			errorMessage = HttpRequest.ERRORDOCUMENTS[self.response.statusCode]['defaulttxt']
+			errorMessage = self.config.configurations['errordocument'][self.response.statusCode]['defaulttxt']
 		self.response.contentLength = len(errorMessage)
 		self.generateResponseHeaderMessage()
 		self.appendResponseMessageBody(errorMessage)
@@ -550,14 +542,14 @@ class HttpRequest:
 		os.setgid(st.st_gid)
 		os.setuid(st.st_uid)
 
-		data = f.read(HttpRequest.SOCKET_BUF_SIZE)
-		nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
+		data = f.read(self.config.configurations['socketbuffersize'])
+		nextData = f.read(self.config.configurations['socketbuffersize'])
 		while nextData and not self.connectionClosed:
 			self.response.message = self.response.message + data
 			# flush data part to listener and keep connection open
 			self.flushResponseToListener()
 			data = nextData
-			nextData = f.read(HttpRequest.SOCKET_BUF_SIZE)
+			nextData = f.read(self.config.configurations['socketbuffersize'])
 		self.response.message = self.response.message + data
 		# flush last data part to listener and close connection
 		self.flushResponseToListener(True)
@@ -613,7 +605,7 @@ class HttpRequest:
 				self.generateCGIEnvironment()
 
 				# execute cgi script - abort timeout of n seconds
-				success, cgiBody = self.parseCGIResponse(CGIExecutor(self).execute(HttpRequest.CGI_SCRIPT_TIMEOUT))
+				success, cgiBody = self.parseCGIResponse(CGIExecutor(self).execute(self.config.configurations['cgitimeout']))
 
 				# if execution was successful and no error was sent already
 				if success:
