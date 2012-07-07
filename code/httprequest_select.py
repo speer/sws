@@ -52,6 +52,10 @@ class Request:
 		self.serverPort = None
 		# ip address of the server
 		self.serverAddr = None
+		# virtualhost for this request
+		self.virtualHost = None
+		# cgi folder for request
+		self.cgiRoot = None
 
 	def getHeader(self,key):
 		if key.title() in self.headers:
@@ -124,11 +128,6 @@ class HttpRequest:
 	HTTP_PROTOCOL = 'HTTP/1.1'
 	ACCEPTED_PROTOCOLS = ['HTTP/1.0','HTTP/1.1']
 	ACCEPTED_REQUEST_TYPES = ['GET','HEAD','POST']
-
-	SERVER_ADMIN = 'stefan@peerweb.it'
-	DOCUMENT_ROOT = '/home/stefan/sws/docs'
-	CGI_ROOT = 'cgi-bin'
-	DIRECTORY_INDEX = ['index.html','index.php','home.html','env.pl']
 
         def __init__ (self, connection, config):
 		# object which contains the configuration of the server
@@ -266,13 +265,34 @@ class HttpRequest:
 				if m != None:
 					self.request.host = m.group(1)
 
+		# determine filepath and virtualhost
+		self.determineFilepath()
+
 		# check if POST message has a message body
 		if self.request.method == 'POST' and self.request.getContentLength() > 0:
 			return self.checkRequestBodyReceived()
 		
 		return True
 
-		
+	def determineFilepath(self):
+		for vHost in self.config.virtualHosts.keys():
+			if self.config.virtualHosts[vHost]['servername'] == self.request.host or self.request.host in self.config.virtualHosts[vHost]['serveralias']:
+				self.request.virtualHost = vHost
+				break
+
+		if self.request.virtualHost == None:
+			self.request.virtualHost = self.config.defaultVirtualHost
+
+		self.request.filepath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.uri)
+
+		# determin cgiRoot (None if not in a CGI root)
+		for cgiRoot in self.config.virtualHosts[self.request.virtualHost]['cgiroot']:
+			root = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + cgiRoot)
+			if self.isJailedInto(root,self.request.filepath):
+				self.request.cgiRoot = root
+				break
+
+
 	# parses an URI (ex. GET / HTTP/1.1) and sets uri, query, host and filepath variables
 	def parseURI(self,uri):
 		if re.match('[hH][tT][tT][pP][sS]?://',uri) == None:
@@ -292,8 +312,6 @@ class HttpRequest:
 		# query supposed to be empty if not specified
 		if self.request.query == None:
 			self.request.query = ''
-
-		self.request.filepath = path.abspath(HttpRequest.DOCUMENT_ROOT + sep + self.request.uri)
 
 
 	# checks if the request is valid so far, or if there are already syntax errors somewhere
@@ -325,7 +343,7 @@ class HttpRequest:
 			else:
 				return contentType
 		except Exception:
-			return 'application/octet-stream'
+			return self.config.configurations['defaulttype']
 
 
 	# determines and sets environment variables, provided to cgi scripts
@@ -341,18 +359,18 @@ class HttpRequest:
 		self.request.cgiEnv['GATEWAY_INTERFACE'] = HttpRequest.CGI_PROTOCOL
 		if self.request.cgiPathInfo != None:
 			self.request.cgiEnv['PATH_INFO'] = self.request.cgiPathInfo
-			self.request.cgiEnv['PATH_TRANSLATED'] = path.abspath (HttpRequest.DOCUMENT_ROOT + sep + self.request.cgiPathInfo)
+			self.request.cgiEnv['PATH_TRANSLATED'] = path.abspath (self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.cgiPathInfo)
 		self.request.cgiEnv['QUERY_STRING'] = self.request.query
 		self.request.cgiEnv['REMOTE_ADDR'] = self.request.remoteAddr
 		self.request.cgiEnv['REMOTE_HOST'] = self.request.remoteFqdn
 		self.request.cgiEnv['REQUEST_METHOD'] = self.request.method
-		self.request.cgiEnv['SCRIPT_NAME'] = self.request.filepath[len(HttpRequest.DOCUMENT_ROOT):]
+		self.request.cgiEnv['SCRIPT_NAME'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):]
 		self.request.cgiEnv['SERVER_NAME'] = self.request.host
 		self.request.cgiEnv['SERVER_PORT'] = str(self.request.serverPort)
 		self.request.cgiEnv['SERVER_PROTOCOL'] = HttpRequest.HTTP_PROTOCOL
 		self.request.cgiEnv['SERVER_SOFTWARE'] = HttpRequest.SERVER_NAME
-		self.request.cgiEnv['DOCUMENT_ROOT'] = HttpRequest.DOCUMENT_ROOT
-		self.request.cgiEnv['SERVER_ADMIN'] = HttpRequest.SERVER_ADMIN
+		self.request.cgiEnv['DOCUMENT_ROOT'] = self.config.virtualHosts[self.request.virtualHost]['documentroot'] 
+		self.request.cgiEnv['SERVER_ADMIN'] = self.config.virtualHosts[self.request.virtualHost]['serveradmin']
 		self.request.cgiEnv['SERVER_ADDR'] = self.request.serverAddr
 		self.request.cgiEnv['SCRIPT_FILENAME'] = self.request.filepath
 		if self.request.query == '':
@@ -445,6 +463,7 @@ class HttpRequest:
 
 	# prepares an 400 Bad Request response, showing the provided errorMessage
 	def setBadRequestError(self, errorMessage):
+		self.response.cgiHeaders = {}
 		self.response.statusCode = 400
 		self.response.statusMessage = 'Bad Request'
 		self.response.contentType = 'text/plain'
@@ -453,6 +472,16 @@ class HttpRequest:
 		self.response.connectionClose = True
 		self.appendResponseMessageBody(errorMessage)
 
+	# prepares an 500 Internal Server Error response, showing the provided errorMessage
+	def setInternalServerError(self, errorMessage):
+		self.response.cgiHeaders = {}
+		self.response.statusCode = 500
+		self.response.statusMessage = 'Internal Server Error'
+		self.response.contentType = 'text/plain'
+		self.response.contentLength = len(errorMessage)
+		self.generateResponseHeaderMessage()
+		self.response.connectionClose = True
+		self.appendResponseMessageBody(errorMessage)
 
 	# sends the response message to the client
 	# returns true when the whole message was sent
@@ -490,9 +519,9 @@ class HttpRequest:
 	# processes the request, i.e. determines whether a CGI script or a normal resource was accessed
 	def process (self):
 		# check if resource is inside the documentroot (jail)
-		if self.isJailedInto(HttpRequest.DOCUMENT_ROOT, self.request.filepath):
+		if self.isJailedInto(self.config.virtualHosts[self.request.virtualHost]['documentroot'], self.request.filepath):
 			# check if resource is a cgi script
-			if self.isJailedInto(HttpRequest.DOCUMENT_ROOT + sep + HttpRequest.CGI_ROOT, self.request.filepath):
+			if self.request.cgiRoot != None:
 				self.processCGI()
 			else:
 				self.processDocument()
@@ -503,7 +532,7 @@ class HttpRequest:
 	def processDocument(self):
 		# check directoryIndex if path is a directory
 		if os.path.isdir(self.request.filepath):
-			for index in HttpRequest.DIRECTORY_INDEX:
+			for index in self.config.virtualHosts[self.request.virtualHost]['directoryindex']:
 				f = path.abspath (self.request.filepath + sep + index)
 				if os.path.isfile(f):
 					self.request.filepath = f
@@ -559,10 +588,9 @@ class HttpRequest:
 	# processes a CGI script request
 	def processCGI(self):
 		# determine path (PATH_INFO, PATH_TRANSLATE)
-		cgiAbsRoot = HttpRequest.DOCUMENT_ROOT + sep + HttpRequest.CGI_ROOT
-		uri = self.request.filepath[len(cgiAbsRoot):]
+		uri = self.request.filepath[len(self.request.cgiRoot):]
 		lines = uri.split('/')
-		cgiScriptPath = cgiAbsRoot
+		cgiScriptPath = self.request.cgiRoot
 		for line in lines:
 			if line == '':
 				continue
@@ -575,7 +603,7 @@ class HttpRequest:
 
 		# check directoryIndex if path is a directory
 		if os.path.isdir(self.request.filepath):
-			for index in HttpRequest.DIRECTORY_INDEX:
+			for index in self.config.virtualHosts[self.request.virtualHost]['directoryindex']:
 				f = path.abspath (self.request.filepath + sep + index)
 				if os.path.isfile(f):
 					self.request.filepath = f
@@ -677,9 +705,9 @@ class HttpRequest:
 					self.response.reprocess = True
 					newEnv = {}
 					if self.request.cgiPathInfo != None:
-						newEnv['REDIRECT_URL'] = self.request.filepath[len(HttpRequest.DOCUMENT_ROOT):] + self.request.cgiPathInfo
+						newEnv['REDIRECT_URL'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):] + self.request.cgiPathInfo
 					else:
-						newEnv['REDIRECT_URL'] = self.request.filepath[len(HttpRequest.DOCUMENT_ROOT):]
+						newEnv['REDIRECT_URL'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):]
 					newEnv['REDIRECT_STATUS'] = str(self.response.statusCode)
 					# rename CGI environment variables
 					for key in self.request.cgiEnv.keys():
@@ -716,9 +744,10 @@ class HttpRequest:
 			curUri = self.request.uri
 			curQuery = self.request.query
 			self.parseURI(self.response.getCGIHeader('Location'))
+			self.determineFilepath()
 			# check for recursion, but may still happen
 			if self.request.host == curHost and self.request.uri == curUri and self.request.query == curQuery:
-				self.sendError(500,'Status 500 - recursion in CGI script')
+				self.setInternalServerError('Status 500 - recursion in CGI script')
 				return False
 			return True
 		else:
