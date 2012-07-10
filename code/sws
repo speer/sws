@@ -1,15 +1,10 @@
 #!/usr/bin/python
 
 import sys, time
-from daemon import Daemon
-import sws_select as SecureWebServer
-
-class SWSDaemon(Daemon):
-	def run(self):
-		SecureWebServer.SecureWebServer()
+import sws_select as sws
 
 if __name__ == "__main__":
-	daemon = SWSDaemon('/tmp/sws.peerweb.it.pid')
+	daemon = sws.SecureWebServer('/tmp/sws.peerweb.it.pid')
 	if len(sys.argv) == 2:
 		if 'start' == sys.argv[1]:
 			daemon.start()

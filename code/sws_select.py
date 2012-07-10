@@ -9,9 +9,11 @@ import sys
 import cPickle
 import re
 import signal
+import logging
 
 import httprequest_select as httprequest
 import config
+from daemon import Daemon
 
 # This class handles an unprivileged process, that raised out of the fork of the root process
 # It receives the HttpRequest object from the Listener Process
@@ -82,17 +84,16 @@ class PrivilegedProcess:
 # This class creates the main architecture of the server
 # It basically represents the Listener Process, which handles new incoming connections, manages communication between processes and clients
 # Makes use of the select system call, i.e. epoll, to efficiently handle many connections simultaneously
-class SecureWebServer:
+class SecureWebServer (Daemon):
 
 	CONFIGURATION_PATH = '/home/stefan/sws/config'
 
-	def __init__(self):
-
+	def initialize(self):
 		self.config = config.SwsConfiguration(SecureWebServer.CONFIGURATION_PATH)
 		success, message = self.config.parseFile()
 		if not success:
-			print message
-			sys.exit(0)
+			logging.getLogger('sws').error(message)
+			return message
 
 		self.rootProcess = None
 	
@@ -105,9 +106,13 @@ class SecureWebServer:
 			# disable blocking mode of the listener socket
 			self.listener.setblocking(0)
 		except:
-			print 'Error: could not bind server at port',self.config.configurations['listen']
-			sys.exit(0)
+			logging.getLogger('sws').error('Could not bind server to port %s' % str(self.config.configurations['listen']))
+			return 'Could not bind server to port ' + str(self.config.configurations['listen'])
 
+		return None
+
+
+	def run(self):	
 		# register a pipe between root and listener for communication of process termination events
 		self.listenerPipe, self.rootPipe = Pipe()
 		signal.signal(signal.SIGTERM, self.shutdown)

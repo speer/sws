@@ -7,6 +7,7 @@ import cPickle
 import socket
 import urllib
 import threading
+import logging
 
 # not python standard lib - for mime type detection
 import magic
@@ -147,6 +148,8 @@ class HttpRequest:
 		self.requestBody = ''
 		# True when the request header was successfully received 
 		self.headerReceived = False
+		# used to prevent cgi endless recursions
+		self.requestNumber = 1
 
 	# determines connection specific variables
 	def determineHostVars (self):
@@ -158,6 +161,8 @@ class HttpRequest:
 			self.request.remoteFqdn = socket.getfqdn(self.request.remoteAddr)
 		else:
 			self.request.remoteFqdn = self.request.remoteAddr
+		# initialize virtualhost to default virtualhost
+		self.request.virtualHost = self.config.defaultVirtualHost
 
 	def unpickle(self,msg):
 		wrapper = cPickle.loads(msg)
@@ -279,9 +284,6 @@ class HttpRequest:
 			if self.config.virtualHosts[vHost]['servername'] == self.request.host or self.request.host in self.config.virtualHosts[vHost]['serveralias']:
 				self.request.virtualHost = vHost
 				break
-
-		if self.request.virtualHost == None:
-			self.request.virtualHost = self.config.defaultVirtualHost
 
 		self.request.filepath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.uri)
 
@@ -413,6 +415,9 @@ class HttpRequest:
 
 		self.response.message = m + '\r\n'
 
+		# log the access
+		self.logAccess()
+
 
 	# appends the body to the response message if the request command was not HEAD
 	def appendResponseMessageBody(self,body):
@@ -429,6 +434,10 @@ class HttpRequest:
 		else:
 			self.response.statusCode = 500
 		self.response.statusMessage = self.config.configurations['errordocument'][self.response.statusCode]['msg']
+		eMsg = errorMessage
+		if eMsg == None:
+			eMsg = '-'
+		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, eMsg))
 
 		errorFile = self.config.configurations['errordocument'][self.response.statusCode]['file']
 		errorRoot = self.config.configurations['errordocumentroot']
@@ -469,6 +478,7 @@ class HttpRequest:
 		self.response.contentType = 'text/plain'
 		self.response.contentLength = len(errorMessage)
 		self.generateResponseHeaderMessage()
+		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, errorMessage))
 		self.response.connectionClose = True
 		self.appendResponseMessageBody(errorMessage)
 
@@ -480,6 +490,7 @@ class HttpRequest:
 		self.response.contentType = 'text/plain'
 		self.response.contentLength = len(errorMessage)
 		self.generateResponseHeaderMessage()
+		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, errorMessage))
 		self.response.connectionClose = True
 		self.appendResponseMessageBody(errorMessage)
 
@@ -739,20 +750,37 @@ class HttpRequest:
 	def checkReprocess(self):
 		#Location flag set in CGI script
 		if self.response.reprocess and self.response.getCGIHeader('Location') != None:
+			self.requestNumber = self.requestNumber + 1
 			# CGI local redirect response (RFC 6.2.2)
-			curHost = self.request.host
-			curUri = self.request.uri
-			curQuery = self.request.query
 			self.parseURI(self.response.getCGIHeader('Location'))
 			self.determineFilepath()
-			# check for recursion, but may still happen
-			if self.request.host == curHost and self.request.uri == curUri and self.request.query == curQuery:
+			# check for too many recursions
+			if self.requestNumber > self.config.configurations['cgirecursionlimit']:
 				self.setInternalServerError('Status 500 - recursion in CGI script')
 				return False
 			return True
 		else:
 			return False
 
+
+	def logAccess(self):
+		referer = '-'
+		useragent = '-'
+		host = '-'
+		req = '-'
+		if self.request.getHeader ('referer') != None:
+			referer = self.request.getHeader('referer')
+		if self.request.getHeader ('user-agent') != None:
+			useragent = self.request.getHeader('user-agent')
+		if self.request.host != None:
+			host = self.request.host
+		if self.request.method != None and self.request.uri != None and self.request.protocol != None:
+			req = self.request.method + ' ' + self.request.uri + ' ' + self.request.protocol
+		logging.getLogger(self.request.virtualHost).info('[Client: %s] [Host: %s:%i] [Request: %s] [Referer: %s] [User-Agent: %s] [Status: %i] [Content-Length: %i]' % (self.request.remoteAddr, host, self.request.serverPort, req, referer, useragent, self.response.statusCode, self.response.contentLength))
+
+
+	def logError(self, message):
+		logging.getLogger(self.request.virtualHost).error(message)
 
 # This class provides an execution environment to the CGI script, which monitors the time it takes and aborts the script if it takes too long
 class CGIExecutor():

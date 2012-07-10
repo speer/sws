@@ -44,8 +44,15 @@ class Daemon:
 			sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
 			sys.exit(1)
 
+
+		msg = self.initialize()
+		if msg != None:
+			sys.stderr.write("Error: %s\n" % msg)
+			sys.exit(1)
+
 		# redirect standard file descriptors
-		"""		
+		# TODO: uncomment stdin/out/err redirections
+		'''
 		sys.stdout.flush()
 		sys.stderr.flush()
 		si = file(self.stdin, 'r')
@@ -54,8 +61,7 @@ class Daemon:
 		os.dup2(si.fileno(), sys.stdin.fileno())
 		os.dup2(so.fileno(), sys.stdout.fileno())
 		os.dup2(se.fileno(), sys.stderr.fileno())
-		"""
-
+		'''
 		# write pidfile
 		atexit.register(self.delpid)
 		pid = str(os.getpid())
@@ -87,6 +93,7 @@ class Daemon:
 		# Start the daemon
 		self.daemonize()
 		self.run()
+
 
 	def stop(self):
 		"""
@@ -132,3 +139,8 @@ class Daemon:
 		daemonized by start() or restart().
 		"""
 
+	def initialize(self):
+		"""
+		You should override this method when you subclass Daemon. It will be called before the process will be
+		daemonized by start() or restart().
+		"""
