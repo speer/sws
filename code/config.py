@@ -38,15 +38,16 @@ class SwsConfiguration:
 			'socketbuffersize':8192,
 			'errordocumentroot':None,
 			'errordocument':{
-				403:{'msg':'Forbidden','file':None,'defaulttxt':'Status 403 - Forbidden. You are not allowed to access this resource.'},
-				404:{'msg':'Not Found','file':None,'defaulttxt':'Status 404 - File Not Found'},
-				500:{'msg':'Internal Server Error','file':None,'defaulttxt':'Status 500 - Internal Server Error'}
+				403:{'msg':'Forbidden','defaulttxt':'Status 403 - Forbidden. You are not allowed to access this resource.','file':None},
+				404:{'msg':'Not Found','defaulttxt':'Status 404 - File Not Found','file':None},
+				500:{'msg':'Internal Server Error','defaulttxt':'Status 500 - Internal Server Error','file':None}
 			},
 			'errorlogfile':None,
 			'accesslogfile':None
 		}
 		self.virtualHosts = {}
 		self.defaultVirtualHost = None
+		logging.getLogger('sws').setLevel(logging.CRITICAL)
 
 	def readConfigFile(self, configFile):
 		configLines = ''
@@ -81,6 +82,10 @@ class SwsConfiguration:
 
 
 	def initVHost (self, vHost):
+		errorDocs = {}
+		for err in self.configurations['errordocument'].keys():
+			errorDocs[err] = self.configurations['errordocument'][err]['file']
+
 		self.virtualHosts[vHost] = {
 			'serveradmin':'',
 			'servername':None,
@@ -90,6 +95,8 @@ class SwsConfiguration:
 			'directoryindex':[],
 			'errorlogfile':self.configurations['errorlogfile'],
 			'accesslogfile':self.configurations['accesslogfile'],
+			'errordocumentroot':self.configurations['errordocumentroot'],
+			'errordocument':errorDocs
 		}
 
 
@@ -152,7 +159,7 @@ class SwsConfiguration:
 					return (False, 'Type error in code of errordocument directive: '+line)
 				if not code in self.configurations[directive].keys():
 					return (False, 'Error code not supported by server: '+line)
-				self.configurations[directive][code]['file'] = fields[2]
+				self.configurations['errordocument'][code]['file'] = fields[2]
 				continue
 	
 			# file
@@ -206,6 +213,7 @@ class SwsConfiguration:
 
 
 		# init main logger
+		logging.getLogger('sws').setLevel(logging.INFO)
 		self.initLogger('sws',self.configurations['errorlogfile'],self.configurations['accesslogfile'])
 
 		# parse virtualhosts
@@ -250,7 +258,10 @@ class SwsConfiguration:
 				if len(fields) < 2:
 					return (False, 'Syntax error in configuration directive: '+line)
 
-				if directive not in ['directoryindex','serveralias','cgiroot'] and len(fields) != 2:
+				if directive in ['errordocument'] and len(fields) != 3:
+					return (False, 'Syntax error in configuration directive: '+line)
+
+				if directive not in ['errordocument','directoryindex','serveralias','cgiroot'] and len(fields) != 2:
 					return (False, 'Syntax error in configuration directive: '+line)
 
 				# multiple values
@@ -264,13 +275,24 @@ class SwsConfiguration:
 					continue
 
 				# directory
-				if directive in ['documentroot']:
+				if directive in ['documentroot','errordocumentroot']:
 					if not os.path.isdir(os.path.abspath(fields[1])):
 						return (False, 'Folder does not exist: '+line)
-					else:
-						self.virtualHosts[vHost][directive] = os.path.abspath(fields[1])
-						continue
-			
+					self.virtualHosts[vHost][directive] = os.path.abspath(fields[1])
+					continue
+
+				# errordocument
+				if directive in ['errordocument']:
+					code = -1
+					try:
+						code = int(fields[1])
+					except:
+						return (False, 'Type error in code of errordocument directive: '+line)
+					if not code in self.configurations[directive].keys():
+						return (False, 'Error code not supported by server: '+line)
+					self.virtualHosts[vHost]['errordocument'][code] = fields[2]
+					continue
+
 				# file
 				if directive in ['errorlogfile','accesslogfile']:
 					filepath = os.path.abspath(fields[1])

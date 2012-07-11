@@ -439,8 +439,8 @@ class HttpRequest:
 			eMsg = '-'
 		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, eMsg))
 
-		errorFile = self.config.configurations['errordocument'][self.response.statusCode]['file']
-		errorRoot = self.config.configurations['errordocumentroot']
+		errorFile = self.config.virtualHosts[self.request.virtualHost]['errordocument'][self.response.statusCode]
+		errorRoot = self.config.virtualHosts[self.request.virtualHost]['errordocumentroot']
 		if errorFile != None and errorMessage == None:
 			errorFile = path.abspath(errorRoot + sep + errorFile)
 
