@@ -374,6 +374,7 @@ class HttpRequest:
 		self.request.cgiEnv['DOCUMENT_ROOT'] = self.config.virtualHosts[self.request.virtualHost]['documentroot'] 
 		self.request.cgiEnv['SERVER_ADMIN'] = self.config.virtualHosts[self.request.virtualHost]['serveradmin']
 		self.request.cgiEnv['SERVER_ADDR'] = self.request.serverAddr
+		self.request.cgiEnv['REDIRECT_STATUS'] = '200'
 		self.request.cgiEnv['SCRIPT_FILENAME'] = self.request.filepath
 		if self.request.query == '':
 			self.request.cgiEnv['REQUEST_URI'] = self.request.uri
@@ -670,10 +671,18 @@ class HttpRequest:
 	def parseCGIResponse(self,document):
 		document = document.lstrip()
 		cgiBody = ''
-		m = re.match(r'((.+)\n\n)(.*)',document,re.DOTALL)
+		m = re.match(r'((.+)[(\r\n\r\n)(\n\n)])(.*)',document,re.DOTALL)
 		if m != None:
-			header = document[:document.find('\n\n')]
-			body = document[document.find('\n\n')+2:]
+			# determine end of line character (RFC says \n, but some implementations do \r\n)
+			sep = '\n\n'
+			pos = document.find('\n\n')
+			posRN = document.find('\r\n\r\n')
+			if pos == -1 or posRN != -1 and pos > posRN:
+				pos = posRN
+				sep = '\r\n\r\n'
+
+			header = document[:pos]
+			body = document[pos+len(sep):]
 			# parse header
 			lines = header.split('\n')
 			for line in lines:

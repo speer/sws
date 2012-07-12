@@ -1,10 +1,6 @@
-#!/usr/bin/python
-
 import os, pwd, grp
 from os import path, sep
 import logging
-
-
 
 class ErrorFilter(logging.Filter):
     def filter(self, record):

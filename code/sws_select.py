@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import select
 import socket
 import os
