@@ -55,8 +55,10 @@ class Request:
 		self.serverAddr = None
 		# virtualhost for this request
 		self.virtualHost = None
-		# cgi folder for request
-		self.cgiRoot = None
+		# cgi directory for request
+		self.cgiDirectory = None
+		# matching directories for request
+		self.directoryChain = ['/']
 
 	def getHeader(self,key):
 		if key.title() in self.headers:
@@ -287,12 +289,17 @@ class HttpRequest:
 
 		self.request.filepath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.uri)
 
-		# determin cgiRoot (None if not in a CGI root)
-		for cgiRoot in self.config.virtualHosts[self.request.virtualHost]['cgiroot']:
-			root = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + cgiRoot)
-			if self.isJailedInto(root,self.request.filepath):
-				self.request.cgiRoot = root
-				break
+	def determineDirectoryChain(self):
+		# determine directory chain
+		for directory in self.config.virtualHosts[self.request.virtualHost]['directory'].keys():
+			dirPath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + directory)
+			if not os.path.isdir(dirPath):
+				continue
+
+			if self.isJailedInto(dirPath,self.request.filepath):
+				self.request.directoryChain.append(directory)
+
+		self.request.directoryChain.sort(reverse=True)
 
 
 	# parses an URI (ex. GET / HTTP/1.1) and sets uri, query, host and filepath variables
@@ -527,49 +534,107 @@ class HttpRequest:
 	def isJailedInto(self, jail, path):
 		return path.startswith(jail + sep) or path == jail
 
+	# updates filename according to a directoryindex
+	def checkDirectoryIndex(self):
+		# check for matching directoryindex
+		if not os.path.isdir(self.request.filepath):
+			return
+		for directory in self.request.directoryChain:
+			# if no directoryindex in current directory, search again one level up
+			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']) == 0:
+				continue
+			# if directoryindex specified, search for match and then stop in any case
+			for index in self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']:
+				f = path.abspath (self.request.filepath + sep + index)
+				if os.path.isfile(f):
+					self.request.filepath = f
+			return
+
+	def checkPathInfoCGI(self):
+		# determine path (PATH_INFO, PATH_TRANSLATE)
+		cgiRoot = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.cgiDirectory)
+		uri = self.request.filepath[len(cgiRoot):]
+		lines = uri.split('/')
+		cgiScriptPath = cgiRoot
+		for line in lines:
+			if line == '':
+				continue
+			cgiScriptPath = cgiScriptPath + sep + line
+			if os.path.isfile(cgiScriptPath):
+				break
+		if cgiScriptPath != self.request.filepath:
+			self.request.cgiPathInfo = urllib.unquote(self.request.filepath[len(cgiScriptPath):])
+			self.request.filepath = cgiScriptPath
+
+	# checks if request is a cgi-request (according to handler (ex. .pl, .sh, etc.))
+	def checkRequest(self):
+		# check for matching folders
+		for directory in self.request.directoryChain:
+			# if no cgi-handler in current directory, search again one level up
+			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['cgihandler']) == 0:
+				continue
+			# if cgi-handler specified, set cgiDirectory and stop
+			self.request.cgiDirectory = directory
+			break
+
+		# request is inside a cgi directory
+		if self.request.cgiDirectory != None:
+			self.checkPathInfoCGI()
+
+		# check directoryIndex if path is a directory
+		self.checkDirectoryIndex()
+
+		# check if resource is a valid file
+		if not os.path.isfile(self.request.filepath):
+			# if a directory is accessed, deliver 403: Forbidden error
+			if os.path.isdir(self.request.filepath):
+				return 403
+			# else deliver a 404: Not Found error
+			else:
+				return 404
+
+		if self.request.cgiDirectory != None:
+			# check file extension
+			for extension in self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.cgiDirectory]['cgihandler']:
+				if self.request.filepath.endswith(extension):
+					return -1
+
+		return -2
+			
+
 
 	# processes the request, i.e. determines whether a CGI script or a normal resource was accessed
 	def process (self):
 		# check if resource is inside the documentroot (jail)
 		if self.isJailedInto(self.config.virtualHosts[self.request.virtualHost]['documentroot'], self.request.filepath):
-			# check if resource is a cgi script
-			if self.request.cgiRoot != None:
+			# determine chain of matching directories
+			self.determineDirectoryChain()
+
+			# check whether request is a CGI request, check documentroot and file existance
+			typ = self.checkRequest()
+
+			if typ == -1:
 				self.processCGI()
-			else:
+			elif typ == -2:
 				self.processDocument()
+			else:
+				self.sendError(typ)
 		else:
 			self.sendError(403)
 
 	# processes a normal resource request
 	def processDocument(self):
-		# check directoryIndex if path is a directory
-		if os.path.isdir(self.request.filepath):
-			for index in self.config.virtualHosts[self.request.virtualHost]['directoryindex']:
-				f = path.abspath (self.request.filepath + sep + index)
-				if os.path.isfile(f):
-					self.request.filepath = f
-					break
-
-		# check if resource is a valid file
-		if os.path.isfile(self.request.filepath):
-			try:
-				self.response.contentType = self.getContentTypeFromFile(self.request.filepath)
-				self.response.contentLength = os.path.getsize(self.request.filepath)
-				self.generateResponseHeaderMessage()
-				# HEAD request must not have a response body, no need to access file
-				if self.request.method != 'HEAD':
-					self.accessFile(self.request.filepath)
-				else:
-					self.flushResponseToListener(True)
-			except:
-				self.sendError(500)
-
-		# if a directory is accessed, deliver 403: Forbidden error
-		elif os.path.isdir(self.request.filepath):
-			self.sendError(403)
-		# else deliver a 404: Not Found error
-		else:
-			self.sendError(404)
+		try:
+			self.response.contentType = self.getContentTypeFromFile(self.request.filepath)
+			self.response.contentLength = os.path.getsize(self.request.filepath)
+			self.generateResponseHeaderMessage()
+			# HEAD request must not have a response body, no need to access file
+			if self.request.method != 'HEAD':
+				self.accessFile(self.request.filepath)
+			else:
+				self.flushResponseToListener(True)
+		except:
+			self.sendError(500)
 
 
 	# accesses a resource and sends the content back to the listener in chunks of data, i.e. not all at once
@@ -599,71 +664,38 @@ class HttpRequest:
 
 	# processes a CGI script request
 	def processCGI(self):
-		# determine path (PATH_INFO, PATH_TRANSLATE)
-		uri = self.request.filepath[len(self.request.cgiRoot):]
-		lines = uri.split('/')
-		cgiScriptPath = self.request.cgiRoot
-		for line in lines:
-			if line == '':
-				continue
-			cgiScriptPath = cgiScriptPath + sep + line
-			if os.path.isfile(cgiScriptPath):
-				break
-		if cgiScriptPath != self.request.filepath:
-			self.request.cgiPathInfo = urllib.unquote(self.request.filepath[len(cgiScriptPath):])
-			self.request.filepath = cgiScriptPath
+		try:
+			# check owner of the file
+			st = os.stat(self.request.filepath)
+			# remove privileges
+			os.setgid(st.st_gid)
+			os.setuid(st.st_uid)
 
-		# check directoryIndex if path is a directory
-		if os.path.isdir(self.request.filepath):
-			for index in self.config.virtualHosts[self.request.virtualHost]['directoryindex']:
-				f = path.abspath (self.request.filepath + sep + index)
-				if os.path.isfile(f):
-					self.request.filepath = f
-					break
+			# check whether resource is an executable file
+	        	if not os.access(self.request.filepath, os.X_OK):
+				self.sendError(500)
+				return
 
-		# check if resource is a valid file
-		if os.path.isfile(self.request.filepath):
-			try:
-				# check owner of the file
-				st = os.stat(self.request.filepath)
-				# remove privileges
-				os.setgid(st.st_gid)
-				os.setuid(st.st_uid)
+			# check if resource is owned by someone except root
+			st = os.stat(self.request.filepath)
+			if st.st_uid == 0:
+				self.sendError(500)
+				return
 
-				# check whether resource is an executable file
-		        	if not os.access(self.request.filepath, os.X_OK):
-					self.sendError(500)
-					return
-
-				# check if resource is owned by someone except root
-				st = os.stat(self.request.filepath)
-				if st.st_uid == 0:
-					self.sendError(500)
-					return
-
-				# generate environment variables for the CGI script
-				self.generateCGIEnvironment()
-
-				# execute cgi script - abort timeout of n seconds
-				success, cgiBody = self.parseCGIResponse(CGIExecutor(self).execute(self.config.configurations['cgitimeout']))
-
-				# if execution was successful and no error was sent already
-				if success:
-					self.response.contentLength = len(cgiBody)
-					self.generateResponseHeaderMessage()
-					self.appendResponseMessageBody(cgiBody)
-					self.flushResponseToListener(True)
-				
-			except:
-				# Exception will be raised by the CGIExecutor if CGI Script takes to much time
-				self.sendError(500,'Status 500 - CGI script aborted because of timeout')
-
-		elif os.path.isdir(self.request.filepath):
-			# if resource is a directory, send 403: Forbidden error
-			self.sendError(403)
-		else:
-			# send 404: Not Found error if resource is not found
-			self.sendError(404)
+			# generate environment variables for the CGI script
+			self.generateCGIEnvironment()
+			# execute cgi script - abort timeout of n seconds
+			success, cgiBody = self.parseCGIResponse(CGIExecutor(self).execute(self.config.configurations['cgitimeout']))
+			# if execution was successful and no error was sent already
+			if success:
+				self.response.contentLength = len(cgiBody)
+				self.generateResponseHeaderMessage()
+				self.appendResponseMessageBody(cgiBody)
+				self.flushResponseToListener(True)
+			
+		except:
+			# Exception will be raised by the CGIExecutor if CGI Script takes to much time
+			self.sendError(500,'Status 500 - CGI script aborted because of timeout')
 
 
 	# parses the response of the CGI script 
@@ -810,14 +842,16 @@ class CGIExecutor():
 		# executed in a separate thread
 		def cgiThread():
 			# creates a new process, running the script
-	        	self.process = subprocess.Popen([self.request.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,env=self.request.request.cgiEnv)
+	        	self.process = subprocess.Popen([self.request.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE,env=self.request.request.cgiEnv)
 
 			# eventual POST data goes to stdin
 			if self.request.request.body != '':
 				self.process.stdin.write(self.request.request.body)
 
 			# the response is on standardoutput
-			self.response = self.process.communicate()[0]
+			self.response, errorData = self.process.communicate()
+			if errorData != None and errorData != '':
+				self.request.logError(errorData.replace('\n',''))
 
 		thread = threading.Thread(target=cgiThread)
 		thread.start()

@@ -1,6 +1,7 @@
 import os, pwd, grp
 from os import path, sep
 import logging
+import re
 
 class ErrorFilter(logging.Filter):
     def filter(self, record):
@@ -87,12 +88,16 @@ class SwsConfiguration:
 			'servername':None,
 			'serveralias':[],
 			'documentroot':None,
-			'cgiroot':[],
-			'directoryindex':[],
 			'errorlogfile':self.configurations['errorlogfile'],
 			'accesslogfile':self.configurations['accesslogfile'],
 			'errordocumentroot':self.configurations['errordocumentroot'],
-			'errordocument':errorDocs
+			'errordocument':errorDocs,
+			'directory':{
+				'/':{
+					'directoryindex':[],
+					'cgihandler':[]
+				}
+			}
 		}
 
 
@@ -111,6 +116,7 @@ class SwsConfiguration:
 
 		lines = configLines.splitlines()
 		for line in lines:
+			line = line.strip()
 			fields = line.split()
 
 			if len(fields) < 2:
@@ -232,13 +238,49 @@ class SwsConfiguration:
 	
 			self.initVHost(vHost)
 			lines = configLines.splitlines()
+
+			curDirectory = '/'
+			directoryOpen = False
+
 			for line in lines:
+				line = line.strip()
+
+				m = re.match(r'<[Dd][Ii][Rr][Ee][Cc][Tt][Oo][Rr][Yy]\s+"(.+)"\s*>',line,re.DOTALL)
+				if m != None and self.virtualHosts[vHost]['documentroot'] == None:
+					return (False,'Please specifiy Documentroot before: '+line)
+
+				if m != None and directoryOpen:
+					return (False,'Nesting of <Directory> directives not allowed: '+line)
+
+				if m != None:
+					directoryOpen = True
+					curDirectory = path.abspath(self.virtualHosts[vHost]['documentroot'] + sep + m.group(1))[len(self.virtualHosts[vHost]['documentroot']):]
+					if curDirectory == '':
+						curDirectory = '/'
+					if curDirectory not in self.virtualHosts[vHost]['directory'].keys():
+						d = {
+							'directoryindex':[],
+							'cgihandler':[]
+						}
+						self.virtualHosts[vHost]['directory'][curDirectory] = d
+					continue
+
+				
+				m2 = re.match(r'</[Dd][Ii][Rr][Ee][Cc][Tt][Oo][Rr][Yy]>',line,re.DOTALL)
+				if m2 != None and directoryOpen:
+					directoryOpen = False
+					curDirectory = '/'
+					continue
+
 				fields = line.split()
 	
 				if len(fields) < 1:
 					return (False, 'Syntax error in configuration directive: '+line)
 	
 				directive = fields[0].lower()
+
+				if directoryOpen and directive not in ['directoryindex','cgihandler']:
+					return (False,'Directive not allowed in <Directory>: '+directive)
 
 				# defaultvirtualhost
 				if directive in ['defaultvirtualhost']:
@@ -248,7 +290,7 @@ class SwsConfiguration:
 					else:
 						return (False,'Multiple Default VirtualHosts')
 
-				if directive not in self.virtualHosts[vHost].keys():
+				if directive not in self.virtualHosts[vHost].keys() and directive not in self.virtualHosts[vHost]['directory']['/'].keys():
 					return (False, 'Unknown configuration directive: '+line)
 
 				if len(fields) < 2:
@@ -257,17 +299,27 @@ class SwsConfiguration:
 				if directive in ['errordocument'] and len(fields) != 3:
 					return (False, 'Syntax error in configuration directive: '+line)
 
-				if directive not in ['errordocument','directoryindex','serveralias','cgiroot'] and len(fields) != 2:
+				if directive not in ['errordocument','directoryindex','serveralias','cgihandler'] and len(fields) != 2:
 					return (False, 'Syntax error in configuration directive: '+line)
 
 				# multiple values
-				if directive in ['directoryindex','serveralias','cgiroot']:
+				if directive in ['serveralias']:
 					first = False
 					for field in fields:
 						if not first:
 							first = True
 							continue
 						self.virtualHosts[vHost][directive].append(field)
+					continue
+
+				# multiple values in <directory>
+				if directive in ['directoryindex','cgihandler']:
+					first = False
+					for field in fields:
+						if not first:
+							first = True
+							continue
+						self.virtualHosts[vHost]['directory'][curDirectory][directive].append(field)
 					continue
 
 				# directory
@@ -301,6 +353,9 @@ class SwsConfiguration:
 				# string directive
 				self.virtualHosts[vHost][directive] = fields[1]
 
+
+			if directoryOpen:
+				return (False, 'Missing </Directory> directive')
 
 		if len(self.virtualHosts) == 0:
 			return (False, 'No VirtualHost specified')
