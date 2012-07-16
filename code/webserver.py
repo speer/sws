@@ -66,11 +66,10 @@ class PrivilegedProcess:
 					conn, addr = rootListener.accept()
 					# for each connection a new unprivileged process is created
 					unprivilegedProcess = Process (target=UnprivilegedProcess,args=(conn,rootListener,webserver.config))
-					unprivilegedProcess.deamon = True
 					unprivilegedProcess.start()
 					conn.close()
 				else:
-					# listener process terminated
+					# listener process terminated, terminate also privileged process
 					if webserver.rootPipe.recv() == 'terminate':
 						try:
 							os.remove(webserver.config.configurations['communicationsocketfile'])
@@ -84,12 +83,13 @@ class PrivilegedProcess:
 # Makes use of the select system call, i.e. epoll, to efficiently handle many connections simultaneously
 class SecureWebServer (Daemon):
 
-	CONFIGURATION_PATH = '/home/stefan/sws/config'
-
-	def initialize(self):
-		self.config = config.SwsConfiguration(SecureWebServer.CONFIGURATION_PATH)
+	# initialize the server, i.e. get configuration and try to listen at port
+	def initialize(self, configuration_path):
+		# parse config files
+		self.config = config.SwsConfiguration(configuration_path)
 		success, message = self.config.parseFile()
 		if not success:	
+			# log error message
 			logging.getLogger('sws').error(message)
 			return message
 
@@ -109,7 +109,7 @@ class SecureWebServer (Daemon):
 
 		return None
 
-
+	# start the server
 	def run(self):	
 		# register a pipe between root and listener for communication of process termination events
 		self.listenerPipe, self.rootPipe = Pipe()

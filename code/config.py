@@ -3,6 +3,7 @@ from os import path, sep
 import logging
 import re
 
+# filter classes, that help logging error and access logs into different files
 class ErrorFilter(logging.Filter):
     def filter(self, record):
         return record.levelno == logging.ERROR or record.levelno == logging.WARN
@@ -11,19 +12,23 @@ class InfoFilter(logging.Filter):
     def filter(self, record):
         return record.levelno == logging.INFO
 
-
+# this class retrieves the servers main log file, parses it and then retrieves all virtualhost configuration files and also parses them.
 class SwsConfiguration:
 
+	# name of the main log file
 	MAIN_CONFIG_FILE = 'sws.conf'
+	# name of the folder, containing a .conf file for each virtualhost
 	SITES_ENABLED_FOLDER = 'sites-enabled'
 
 	def __init__(self, configFolder):
+		# folder containing the main configuration file and the sites-enabled folder
 		self.configFolder = path.abspath(configFolder)
+		# path to the configuration file
 		self.configFile = path.abspath(self.configFolder + sep + SwsConfiguration.MAIN_CONFIG_FILE)
+		# object containing the server configuration
 		self.configurations = {
 			'listen':80,
 			'host':'',
-			'pidfile':None,
 			'communicationsocketfile':None,
 			'user':None,
 			'group':None,
@@ -42,10 +47,14 @@ class SwsConfiguration:
 			'errorlogfile':None,
 			'accesslogfile':None
 		}
+		# obejct containing the configurations for every virtualhost
 		self.virtualHosts = {}
+		# name of the default virtualhost, that is applied if no virtualhost matches a given hostname
 		self.defaultVirtualHost = None
+		# initialize logger to critical, so that no logging takes place if the log file can not be determined
 		logging.getLogger('sws').setLevel(logging.CRITICAL)
 
+	# get data out of the configuration file
 	def readConfigFile(self, configFile):
 		configLines = ''
 		try:
@@ -60,6 +69,7 @@ class SwsConfiguration:
 		except:
 			return (False, 'Cannot read configuration file '+configFile)
 
+	# initialize a logger (either global or optional loggers for every virtualhost)
 	def initLogger(self, name, errorFile, accessFile):
 		logger = logging.getLogger(name)
 		logger.setLevel(logging.INFO)
@@ -77,7 +87,7 @@ class SwsConfiguration:
 		logger.addHandler(errorHandler)
 		logger.addHandler(accessHandler)
 
-
+	# create a new virtualhost object
 	def initVHost (self, vHost):
 		errorDocs = {}
 		for err in self.configurations['errordocument'].keys():
@@ -101,8 +111,8 @@ class SwsConfiguration:
 		}
 
 
+	# start the configuration files parsing process
 	def parseFile(self):
-
 		# parse main config file
 
 		if not os.path.isdir(self.configFolder):
@@ -116,6 +126,8 @@ class SwsConfiguration:
 
 		lines = configLines.splitlines()
 		for line in lines:
+
+			# check line by line
 			line = line.strip()
 			fields = line.split()
 
@@ -165,7 +177,7 @@ class SwsConfiguration:
 				continue
 	
 			# file
-			if directive in ['communicationsocketfile','pidfile','errorlogfile','accesslogfile']:
+			if directive in ['communicationsocketfile','errorlogfile','accesslogfile']:
 				filepath = os.path.abspath(fields[1])
 				pos = filepath.rfind(sep)
 				if not os.path.isdir(filepath[:pos]):
@@ -218,6 +230,7 @@ class SwsConfiguration:
 		logging.getLogger('sws').setLevel(logging.INFO)
 		self.initLogger('sws',self.configurations['errorlogfile'],self.configurations['accesslogfile'])
 
+
 		# parse virtualhosts
 
 		# check if sites enabled folder exists
@@ -225,7 +238,7 @@ class SwsConfiguration:
 		if not os.path.isdir(sitesEnabled):
 			return (False, 'Folder does not exists: '+sitesEnabled)
 	
-	
+		# process every .conf file in the sites-enabled folder
 		for filename in os.listdir(sitesEnabled):
 			vHost = os.path.abspath(sitesEnabled + sep + filename)
 			# skip directories
@@ -243,8 +256,10 @@ class SwsConfiguration:
 			directoryOpen = False
 
 			for line in lines:
-				line = line.strip()
 
+				# process every line of a configuration file
+				line = line.strip()
+				# check for <directory> directive
 				m = re.match(r'<[Dd][Ii][Rr][Ee][Cc][Tt][Oo][Rr][Yy]\s+"(.+)"\s*>',line,re.DOTALL)
 				if m != None and self.virtualHosts[vHost]['documentroot'] == None:
 					return (False,'Please specifiy Documentroot before: '+line)
@@ -377,6 +392,3 @@ class SwsConfiguration:
 
 		return (True,'Parsing OK')
 
-
-#c = SwsConfiguration ('/home/stefan/sws/config')
-#print c.parseFile()[1]

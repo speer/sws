@@ -1,10 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python -B
 
 import sys, time
 import webserver
 
+CONFIGURATION_PATH = '/home/stefan/sws/config'
+PID_PATH = '/tmp/sws.peerweb.it.pid'
+
 if __name__ == "__main__":
-	daemon = webserver.SecureWebServer('/tmp/sws.peerweb.it.pid')
+	daemon = webserver.SecureWebServer(PID_PATH, CONFIGURATION_PATH)
 	if len(sys.argv) == 2:
 		if 'start' == sys.argv[1]:
 			daemon.start()

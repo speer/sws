@@ -53,11 +53,11 @@ class Request:
 		self.serverPort = None
 		# ip address of the server
 		self.serverAddr = None
-		# virtualhost for this request
+		# virtualhost that matches the request
 		self.virtualHost = None
-		# cgi directory for request
+		# cgi directory matching the request
 		self.cgiDirectory = None
-		# matching directories for request
+		# list of matching directory directives for this request
 		self.directoryChain = ['/']
 
 	def getHeader(self,key):
@@ -126,7 +126,7 @@ class Response:
 # This class contains the main HTTP functionality (parsing, etc.)
 class HttpRequest:
 
-	SERVER_NAME = 'SWS/0.1'
+	SERVER_NAME = 'SWS/0.9'
 	CGI_PROTOCOL = 'CGI/1.1'
 	HTTP_PROTOCOL = 'HTTP/1.1'
 	ACCEPTED_PROTOCOLS = ['HTTP/1.0','HTTP/1.1']
@@ -245,7 +245,7 @@ class HttpRequest:
 				# request line
 				words = line.split(' ')
 				if len(words) != 3:
-					self.setBadRequestError('Status 400 - Bad Request Line')
+					self.setBadRequestError('Bad Request Line')
 					return True
 				self.request.method = words[0].upper()
 				self.parseURI(words[1])
@@ -258,7 +258,7 @@ class HttpRequest:
 				# header line
 				pos = line.find(':')
 				if pos <= 0 or pos >= len(line)-1:
-					self.setBadRequestError('Status 400 - Bad Header')
+					self.setBadRequestError('Bad Header')
 					return True
 				key = line[0:pos].strip()
 				value = line[pos+1:len(line)].strip()
@@ -290,7 +290,7 @@ class HttpRequest:
 		self.request.filepath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.uri)
 
 	def determineDirectoryChain(self):
-		# determine directory chain
+		# determine list of <directory> directives that match request
 		for directory in self.config.virtualHosts[self.request.virtualHost]['directory'].keys():
 			dirPath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + directory)
 			if not os.path.isdir(dirPath):
@@ -328,13 +328,13 @@ class HttpRequest:
 		if self.response.statusCode != 200:
 			return False
 		if self.request.method not in HttpRequest.ACCEPTED_REQUEST_TYPES:
-			self.setBadRequestError('Status 400 - Command not supported')
+			self.setBadRequestError('Command not supported')
 			return False
 		if self.request.protocol not in HttpRequest.ACCEPTED_PROTOCOLS:
-			self.setBadRequestError('Status 400 - Version not supported')
+			self.setBadRequestError('Version not supported')
 			return False
 		if self.request.host == None:
-			self.setBadRequestError('Status 400 - No Host specified')
+			self.setBadRequestError('No Host specified')
 			return False
 		return True
 
@@ -444,12 +444,12 @@ class HttpRequest:
 		self.response.statusMessage = self.config.configurations['errordocument'][self.response.statusCode]['msg']
 		eMsg = errorMessage
 		if eMsg == None:
-			eMsg = '-'
+			eMsg = ''
 		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, eMsg))
 
 		errorFile = self.config.virtualHosts[self.request.virtualHost]['errordocument'][self.response.statusCode]
 		errorRoot = self.config.virtualHosts[self.request.virtualHost]['errordocumentroot']
-		if errorFile != None and errorMessage == None:
+		if errorFile != None:
 			errorFile = path.abspath(errorRoot + sep + errorFile)
 
 			# check if errordocument is a valid file and no other message has been set
@@ -620,7 +620,7 @@ class HttpRequest:
 			else:
 				self.sendError(typ)
 		else:
-			self.sendError(403)
+			self.sendError(403,'Not allowed to access resource outside documentroot')
 
 	# processes a normal resource request
 	def processDocument(self):
@@ -673,13 +673,13 @@ class HttpRequest:
 
 			# check whether resource is an executable file
 	        	if not os.access(self.request.filepath, os.X_OK):
-				self.sendError(500)
+				self.sendError(500,'CGI Script is not an executable file')
 				return
 
 			# check if resource is owned by someone except root
 			st = os.stat(self.request.filepath)
 			if st.st_uid == 0:
-				self.sendError(500)
+				self.sendError(500,'CGI Script owned by root')
 				return
 
 			# generate environment variables for the CGI script
@@ -695,7 +695,7 @@ class HttpRequest:
 			
 		except:
 			# Exception will be raised by the CGIExecutor if CGI Script takes to much time
-			self.sendError(500,'Status 500 - CGI script aborted because of timeout')
+			self.sendError(500,'CGI script aborted (because of timeout)')
 
 
 	# parses the response of the CGI script 
@@ -722,14 +722,14 @@ class HttpRequest:
 				line = re.sub('\s{2,}', ' ', line)
 				pos = line.find(':')
 				if pos <= 0 or pos >= len(line)-1:
-					self.sendError(500,'Status 500 - Bad Header in CGI response')
+					self.sendError(500,'Bad Header in CGI response')
 					return (False,'')
 				key = line[0:pos].strip()
 				value = line[pos+1:len(line)].strip()
 				self.response.setCGIHeader(key,value)
 
 			if len(self.response.cgiHeaders) == 0:
-				self.sendError(500,'Status 500 - CGI Script has no headers')
+				self.sendError(500,'CGI Script has no headers')
 				return (False,'')
 
 			location = self.response.getCGIHeader('Location')
@@ -738,7 +738,7 @@ class HttpRequest:
 				if body != None and body != '':
 					if self.response.getCGIHeader('Content-Type') == None:
 						# content-type must be specified
-						self.sendError(500,'Status 500 - CGI Script must specify content type')
+						self.sendError(500,'CGI Script must specify content type')
 						return (False,'')
 
 					cgiBody = body
@@ -774,12 +774,12 @@ class HttpRequest:
 					if body != None and body != '':
 						if self.response.getCGIHeader('Content-Type') == None:
 							# content-type must be specified
-							self.sendError(500,'Status 500 - CGI Script must specify content type')
+							self.sendError(500,'CGI Script must specify content type')
 							return (False,'')
 						# success
 						cgiBody = body
 		else:
-			self.sendError(500,'Status 500 - CGI returned wrong response')
+			self.sendError(500,'CGI returned wrong response')
 			return (False,'')
 
 		return (True,cgiBody)
@@ -797,13 +797,13 @@ class HttpRequest:
 			self.determineFilepath()
 			# check for too many recursions
 			if self.requestNumber > self.config.configurations['cgirecursionlimit']:
-				self.setInternalServerError('Status 500 - recursion in CGI script')
+				self.setInternalServerError('Recursion in CGI script')
 				return False
 			return True
 		else:
 			return False
 
-
+	# log into access-log file
 	def logAccess(self):
 		referer = '-'
 		useragent = '-'
@@ -819,7 +819,7 @@ class HttpRequest:
 			req = self.request.method + ' ' + self.request.uri + ' ' + self.request.protocol
 		logging.getLogger(self.request.virtualHost).info('[Client: %s] [Host: %s:%i] [Request: %s] [Referer: %s] [User-Agent: %s] [Status: %i] [Content-Length: %i]' % (self.request.remoteAddr, host, self.request.serverPort, req, referer, useragent, self.response.statusCode, self.response.contentLength))
 
-
+	# log into error-log file
 	def logError(self, message):
 		logging.getLogger(self.request.virtualHost).error(message)
 
@@ -850,6 +850,7 @@ class CGIExecutor():
 
 			# the response is on standardoutput
 			self.response, errorData = self.process.communicate()
+			# if some data is available on standarderror, log to errorlog
 			if errorData != None and errorData != '':
 				self.request.logError(errorData.replace('\n',''))
 
