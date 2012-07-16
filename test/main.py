@@ -134,9 +134,6 @@ class ConfigTestCase (unittest.TestCase):
 		c = config.SwsConfiguration(testfolder)
 		assert c.parseFile()[2] == 31
 
-
-	# TODO 32 - 40
-
 	def testConfigVHUnknownDirective(self):
 		testfolder = self.CONFIG_FOLDER + '/t25'
 		c = config.SwsConfiguration(testfolder)
@@ -147,6 +144,45 @@ class ConfigTestCase (unittest.TestCase):
 		c = config.SwsConfiguration(testfolder)
 		assert c.parseFile()[2] == 33
 
+	def testConfigVHSyntaxError2(self):
+		testfolder = self.CONFIG_FOLDER + '/t27'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 34
+
+	def testConfigVHSyntaxError3(self):
+		testfolder = self.CONFIG_FOLDER + '/t28'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 35
+
+	def testConfigVHDirectoryNotFound(self):
+		testfolder = self.CONFIG_FOLDER + '/t29'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 36
+
+	def testConfigVHSyntaxError4(self):
+		testfolder = self.CONFIG_FOLDER + '/t30'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 37
+
+	def testConfigVHSyntaxError5(self):
+		testfolder = self.CONFIG_FOLDER + '/t31'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 38
+
+	def testConfigVHSyntaxError6(self):
+		testfolder = self.CONFIG_FOLDER + '/t32'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 39
+
+	def testConfigVHSyntaxError7(self):
+		testfolder = self.CONFIG_FOLDER + '/t33'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 40
+
+	def testConfigFileOK(self):
+		testfolder = self.CONFIG_FOLDER + '/t50'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 0
 
 if __name__ == "__main__":
 	unittest.main()
