@@ -445,6 +445,9 @@ class HttpRequest:
 		eMsg = errorMessage
 		if eMsg == None:
 			eMsg = ''
+		else:
+			eMsg = eMsg + ': '
+		eMsg = eMsg + self.request.filepath
 		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, eMsg))
 
 		errorFile = self.config.virtualHosts[self.request.virtualHost]['errordocument'][self.response.statusCode]
@@ -467,8 +470,8 @@ class HttpRequest:
 				except:
 					if self.response.flushed:
 						return
-					# if not flushed, try to flush standard message (defaulttxt)
 
+		# if not flushed, try to flush message or standard message (defaulttxt)
 		self.response.contentType = 'text/plain'
 		if errorMessage == None:
 			errorMessage = self.config.configurations['errordocument'][self.response.statusCode]['defaulttxt']
@@ -642,12 +645,6 @@ class HttpRequest:
 	def accessFile(self, filename):
 		f = file(filename,'r')
 
-		# check owner of the file
-		st = os.stat(filename)
-		# remove privileges
-		os.setgid(st.st_gid)
-		os.setuid(st.st_uid)
-
 		data = f.read(self.config.configurations['socketbuffersize'])
 		nextData = f.read(self.config.configurations['socketbuffersize'])
 		while nextData and not self.connectionClosed:
@@ -665,12 +662,6 @@ class HttpRequest:
 	# processes a CGI script request
 	def processCGI(self):
 		try:
-			# check owner of the file
-			st = os.stat(self.request.filepath)
-			# remove privileges
-			os.setgid(st.st_gid)
-			os.setuid(st.st_uid)
-
 			# check whether resource is an executable file
 	        	if not os.access(self.request.filepath, os.X_OK):
 				self.sendError(500,'CGI Script is not an executable file')
@@ -681,6 +672,10 @@ class HttpRequest:
 			if st.st_uid == 0:
 				self.sendError(500,'CGI Script owned by root')
 				return
+
+			# remove privileges
+			os.setgid(st.st_gid)
+			os.setuid(st.st_uid)
 
 			# generate environment variables for the CGI script
 			self.generateCGIEnvironment()
