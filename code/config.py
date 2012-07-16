@@ -116,13 +116,13 @@ class SwsConfiguration:
 		# parse main config file
 
 		if not os.path.isdir(self.configFolder):
-			return (False, 'Configuration folder '+self.configFolder+' not found')
+			return (False, 'Configuration folder '+self.configFolder+' not found',10)
 		if not os.path.isfile(self.configFile):
-			return (False, 'Configuration file '+self.configFile+' not found')
+			return (False, 'Configuration file '+self.configFile+' not found',11)
 
 		success, configLines = self.readConfigFile(self.configFile)
 		if not success:
-			return (False,configLines)
+			return (False,configLines,12)
 
 		lines = configLines.splitlines()
 		for line in lines:
@@ -132,18 +132,18 @@ class SwsConfiguration:
 			fields = line.split()
 
 			if len(fields) < 2:
-				return (False, 'Syntax error in configuration directive: '+line)
+				return (False, 'Syntax error in configuration directive: '+line,13)
 
 			directive = fields[0].lower()
 
 			if directive not in self.configurations.keys():
-				return (False, 'Unknown configuration directive: '+line)
+				return (False, 'Unknown configuration directive: '+line,14)
 
 			if directive in ['errordocument'] and len(fields) != 3:
-				return (False, 'Syntax error in configuration directive: '+line)
+				return (False, 'Syntax error in configuration directive: '+line,15)
 
 			if directive not in ['errordocument'] and len(fields) != 2:
-				return (False, 'Syntax error in configuration directive: '+line)
+				return (False, 'Syntax error in configuration directive: '+line,16)
 
 			# integer directives
 			if directive in ['listen','cgitimeout','listenqueuesize','socketbuffersize','cgirecursionlimit']:
@@ -152,7 +152,7 @@ class SwsConfiguration:
 					self.configurations[directive] = value
 					continue
 				except:
-					return (False, 'Type error in configuration directive: '+line)
+					return (False, 'Type error in configuration directive: '+line,17)
 
 			# boolean directives
 			if directive in ['hostnamelookups']:
@@ -161,7 +161,7 @@ class SwsConfiguration:
 				elif fields[1].lower() == 'off':
 					self.configurations[directive] = False
 				else:
-					return (False, 'Type error in configuration directive: '+line)
+					return (False, 'Type error in configuration directive: '+line,18)
 				continue
 
 			# errordocument
@@ -170,9 +170,9 @@ class SwsConfiguration:
 				try:
 					code = int(fields[1])
 				except:
-					return (False, 'Type error in code of errordocument directive: '+line)
+					return (False, 'Type error in code of errordocument directive: '+line,19)
 				if not code in self.configurations[directive].keys():
-					return (False, 'Error code not supported by server: '+line)
+					return (False, 'Error code not supported by server: '+line,20)
 				self.configurations['errordocument'][code]['file'] = fields[2]
 				continue
 	
@@ -181,14 +181,14 @@ class SwsConfiguration:
 				filepath = os.path.abspath(fields[1])
 				pos = filepath.rfind(sep)
 				if not os.path.isdir(filepath[:pos]):
-					return (False, 'Folder does not exist: '+filepath[:pos])
+					return (False, 'Folder does not exist: '+filepath[:pos],21)
 				self.configurations[directive] = filepath
 				continue
 	
 			# directory
 			if directive in ['errordocumentroot']:
 				if not os.path.isdir(os.path.abspath(fields[1])):
-					return (False, 'Folder does not exist: '+line)
+					return (False, 'Folder does not exist: '+line,22)
 				self.configurations[directive] = os.path.abspath(fields[1])
 				continue
 	
@@ -202,7 +202,7 @@ class SwsConfiguration:
 						pw = pwd.getpwuid(int(fields[1]))
 						self.configurations[directive] = int(pw.pw_uid)
 					except:
-						return (False, 'User does not exist: '+line)
+						return (False, 'User does not exist: '+line,23)
 				continue
 
 			# group
@@ -215,7 +215,7 @@ class SwsConfiguration:
 						gr = grp.getgrgid(int(fields[1]))
 						self.configurations[directive] = int(gr.gr_gid)
 					except:
-						return (False, 'Group does not exist: '+line)
+						return (False, 'Group does not exist: '+line,24)
 				continue
 
 			# string directive
@@ -223,7 +223,7 @@ class SwsConfiguration:
 	
 		for directive in self.configurations.keys():
 			if self.configurations[directive] == None:
-				return (False, 'Mandatory directive not specified: '+directive)
+				return (False, 'Mandatory directive not specified: '+directive,25)
 
 
 		# init main logger
@@ -236,7 +236,7 @@ class SwsConfiguration:
 		# check if sites enabled folder exists
 		sitesEnabled = os.path.abspath(self.configFolder + sep + SwsConfiguration.SITES_ENABLED_FOLDER)
 		if not os.path.isdir(sitesEnabled):
-			return (False, 'Folder does not exists: '+sitesEnabled)
+			return (False, 'Folder does not exists: '+sitesEnabled,26)
 	
 		# process every .conf file in the sites-enabled folder
 		for filename in os.listdir(sitesEnabled):
@@ -262,10 +262,10 @@ class SwsConfiguration:
 				# check for <directory> directive
 				m = re.match(r'<[Dd][Ii][Rr][Ee][Cc][Tt][Oo][Rr][Yy]\s+"(.+)"\s*>',line,re.DOTALL)
 				if m != None and self.virtualHosts[vHost]['documentroot'] == None:
-					return (False,'Please specifiy Documentroot before: '+line)
+					return (False,'Please specifiy Documentroot before: '+line,27)
 
 				if m != None and directoryOpen:
-					return (False,'Nesting of <Directory> directives not allowed: '+line)
+					return (False,'Nesting of <Directory> directives not allowed: '+line,28)
 
 				if m != None:
 					directoryOpen = True
@@ -290,12 +290,12 @@ class SwsConfiguration:
 				fields = line.split()
 	
 				if len(fields) < 1:
-					return (False, 'Syntax error in configuration directive: '+line)
+					return (False, 'Syntax error in configuration directive: '+line,29)
 	
 				directive = fields[0].lower()
 
 				if directoryOpen and directive not in ['directoryindex','cgihandler']:
-					return (False,'Directive not allowed in <Directory>: '+directive)
+					return (False,'Directive not allowed in <Directory>: '+directive,30)
 
 				# defaultvirtualhost
 				if directive in ['defaultvirtualhost']:
@@ -303,19 +303,19 @@ class SwsConfiguration:
 						self.defaultVirtualHost = vHost
 						continue
 					else:
-						return (False,'Multiple Default VirtualHosts')
+						return (False,'Multiple Default VirtualHosts',31)
 
 				if directive not in self.virtualHosts[vHost].keys() and directive not in self.virtualHosts[vHost]['directory']['/'].keys():
-					return (False, 'Unknown configuration directive: '+line)
+					return (False, 'Unknown configuration directive: '+line,32)
 
 				if len(fields) < 2:
-					return (False, 'Syntax error in configuration directive: '+line)
+					return (False, 'Syntax error in configuration directive: '+line,33)
 
 				if directive in ['errordocument'] and len(fields) != 3:
-					return (False, 'Syntax error in configuration directive: '+line)
+					return (False, 'Syntax error in configuration directive: '+line,34)
 
 				if directive not in ['errordocument','directoryindex','serveralias','cgihandler'] and len(fields) != 2:
-					return (False, 'Syntax error in configuration directive: '+line)
+					return (False, 'Syntax error in configuration directive: '+line,35)
 
 				# multiple values
 				if directive in ['serveralias']:
@@ -340,7 +340,7 @@ class SwsConfiguration:
 				# directory
 				if directive in ['documentroot','errordocumentroot']:
 					if not os.path.isdir(os.path.abspath(fields[1])):
-						return (False, 'Folder does not exist: '+line)
+						return (False, 'Folder does not exist: '+line,36)
 					self.virtualHosts[vHost][directive] = os.path.abspath(fields[1])
 					continue
 
@@ -350,9 +350,9 @@ class SwsConfiguration:
 					try:
 						code = int(fields[1])
 					except:
-						return (False, 'Type error in code of errordocument directive: '+line)
+						return (False, 'Type error in code of errordocument directive: '+line,37)
 					if not code in self.configurations[directive].keys():
-						return (False, 'Error code not supported by server: '+line)
+						return (False, 'Error code not supported by server: '+line,38)
 					self.virtualHosts[vHost]['errordocument'][code] = fields[2]
 					continue
 
@@ -361,7 +361,7 @@ class SwsConfiguration:
 					filepath = os.path.abspath(fields[1])
 					pos = filepath.rfind(sep)
 					if not os.path.isdir(filepath[:pos]):
-						return (False, 'Folder does not exist: '+filepath[:pos])
+						return (False, 'Folder does not exist: '+filepath[:pos],39)
 					self.virtualHosts[vHost][directive] = filepath
 					continue
 
@@ -370,13 +370,13 @@ class SwsConfiguration:
 
 
 			if directoryOpen:
-				return (False, 'Missing </Directory> directive')
+				return (False, 'Missing </Directory> directive',40)
 
 		if len(self.virtualHosts) == 0:
-			return (False, 'No VirtualHost specified')
+			return (False, 'No VirtualHost specified',41)
 
 		if self.defaultVirtualHost == None:
-			return (False, 'No DefaultVirtualHost specified')
+			return (False, 'No DefaultVirtualHost specified',42)
 
 
 		# check for mandatory directives
@@ -388,7 +388,7 @@ class SwsConfiguration:
 		for vHost in self.virtualHosts.keys():
 			for directive in self.virtualHosts[vHost].keys():
 				if self.virtualHosts[vHost][directive] == None:
-					return (False, 'Mandatory directive ('+directive+') not specified in VirtualHost: '+vHost)
+					return (False, 'Mandatory directive ('+directive+') not specified in VirtualHost: '+vHost,43)
 
-		return (True,'Parsing OK')
+		return (True,'Parsing OK',0)
 

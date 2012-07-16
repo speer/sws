@@ -87,7 +87,7 @@ class SecureWebServer (Daemon):
 	def initialize(self, configuration_path):
 		# parse config files
 		self.config = config.SwsConfiguration(configuration_path)
-		success, message = self.config.parseFile()
+		success, message, code = self.config.parseFile()
 		if not success:	
 			# log error message
 			logging.getLogger('sws').error(message)
