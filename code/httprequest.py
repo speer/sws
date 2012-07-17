@@ -290,6 +290,7 @@ class HttpRequest:
 		self.request.filepath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.uri)
 
 	def determineDirectoryChain(self):
+		self.request.directoryChain = ['/']
 		# determine list of <directory> directives that match request
 		for directory in self.config.virtualHosts[self.request.virtualHost]['directory'].keys():
 			dirPath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + directory)
@@ -571,6 +572,7 @@ class HttpRequest:
 
 	# checks if request is a cgi-request (according to handler (ex. .pl, .sh, etc.))
 	def checkRequest(self):
+		self.request.cgiDirectory = None
 		# check for matching folders
 		for directory in self.request.directoryChain:
 			# if no cgi-handler in current directory, search again one level up
