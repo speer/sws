@@ -149,6 +149,8 @@ class SwsConfiguration:
 			if directive in ['listen','cgitimeout','listenqueuesize','socketbuffersize','cgirecursionlimit']:
 				try:
 					value = int(fields[1])
+					if value <= 0:
+						return (False, 'Value less or equal to 0 not supported in configuration directive: '+line,43)
 					self.configurations[directive] = value
 					continue
 				except:
