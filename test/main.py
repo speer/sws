@@ -483,6 +483,22 @@ class ServerTestCase (unittest.TestCase):
 			connection.close()
 
 
+	def testLocalhostCGINoCGI(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/cgi-bin/notcgi.html')
+			response = connection.getresponse()
+			assert response.status == 200
+			data = response.read()
+			data = data.strip()
+			if method == 'HEAD':
+				assert data == ''
+			else:
+				assert data == 'successnotcgi'
+			connection.close()
+
+
 if __name__ == "__main__":
 	unittest.main()
 
