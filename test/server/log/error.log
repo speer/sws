@@ -149,3 +149,57 @@
 [2012-07-06 11:29:24,274] [ERROR] 404 - Not Found - /home/stefan/sws/test/server/docs/localhost/index_notfound.html
 [2012-07-06 11:29:24,448] [ERROR] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
 [2012-07-06 11:29:24,496] [ERROR] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[2012-07-06 12:01:54,553] [ERROR] 500 - Internal Server Error - CGI returned wrong response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[2012-07-06 12:01:54,568] [ERROR] 500 - Internal Server Error - CGI returned wrong response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[2012-07-06 12:01:54,583] [ERROR] 500 - Internal Server Error - CGI returned wrong response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[2012-07-06 12:01:54,591] [ERROR] 500 - Internal Server Error - CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[2012-07-06 12:01:54,599] [ERROR] 500 - Internal Server Error - CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[2012-07-06 12:01:54,606] [ERROR] 500 - Internal Server Error - CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[2012-07-06 12:01:55,656] [ERROR] 500 - Internal Server Error - CGI script aborted (because of timeout): /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[2012-07-06 12:01:56,669] [ERROR] 500 - Internal Server Error - CGI script aborted (because of timeout): /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[2012-07-06 12:01:57,679] [ERROR] 500 - Internal Server Error - CGI script aborted (because of timeout): /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[2012-07-06 12:01:57,719] [ERROR] 500 - Internal Server Error - CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[2012-07-06 12:01:57,736] [ERROR] 500 - Internal Server Error - CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[2012-07-06 12:01:57,751] [ERROR] 500 - Internal Server Error - CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[2012-07-06 12:01:57,758] [ERROR] 500 - Internal Server Error - CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[2012-07-06 12:01:57,766] [ERROR] 500 - Internal Server Error - CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[2012-07-06 12:01:57,773] [ERROR] 500 - Internal Server Error - CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[2012-07-06 12:01:58,001] [ERROR] 500 - Internal Server Error - Recursion in CGI script
+[2012-07-06 12:01:58,115] [ERROR] 500 - Internal Server Error - Recursion in CGI script
+[2012-07-06 12:01:58,240] [ERROR] 500 - Internal Server Error - Recursion in CGI script
+[2012-07-06 12:01:58,244] [ERROR] 403 - Forbidden - Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[2012-07-06 12:01:58,251] [ERROR] 403 - Forbidden - Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[2012-07-06 12:01:58,258] [ERROR] 403 - Forbidden - Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[2012-07-06 12:01:58,262] [ERROR] 400 - Bad Request - Command not supported
+[2012-07-06 12:01:58,266] [ERROR] 404 - Not Found - /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[2012-07-06 12:01:58,274] [ERROR] 404 - Not Found - /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[2012-07-06 12:01:58,282] [ERROR] 404 - Not Found - /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[2012-07-06 12:01:58,432] [ERROR] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[2012-07-06 12:01:58,473] [ERROR] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Tue Jul 17 18:38:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI returned wrong response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Tue Jul 17 18:38:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI returned wrong response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Tue Jul 17 18:38:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI returned wrong response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Tue Jul 17 18:38:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Tue Jul 17 18:38:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Tue Jul 17 18:38:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Tue Jul 17 18:38:32 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI script aborted (because of timeout): /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Tue Jul 17 18:38:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI script aborted (because of timeout): /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI script aborted (because of timeout): /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Tue Jul 17 18:38:34 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Tue Jul 17 18:38:35 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Tue Jul 17 18:38:35 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Tue Jul 17 18:38:35 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2

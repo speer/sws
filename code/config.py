@@ -76,12 +76,12 @@ class SwsConfiguration:
 
 		errorHandler = logging.FileHandler(errorFile)
 		errorHandler.addFilter(ErrorFilter())
-		errorFormatter = logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s')
+		errorFormatter = logging.Formatter('%(message)s')
 		errorHandler.setFormatter(errorFormatter)
 
 		accessHandler = logging.FileHandler(accessFile)
 		accessHandler.addFilter(InfoFilter())
-		accessFormatter = logging.Formatter('[%(asctime)s] %(message)s')
+		accessFormatter = logging.Formatter('%(message)s')
 		accessHandler.setFormatter(accessFormatter)
 
 		logger.addHandler(errorHandler)

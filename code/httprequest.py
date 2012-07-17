@@ -449,7 +449,7 @@ class HttpRequest:
 		else:
 			eMsg = eMsg + ': '
 		eMsg = eMsg + self.request.filepath
-		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, eMsg))
+		self.logError('%i %s: %s' % (self.response.statusCode, self.response.statusMessage, eMsg))
 
 		errorFile = self.config.virtualHosts[self.request.virtualHost]['errordocument'][self.response.statusCode]
 		errorRoot = self.config.virtualHosts[self.request.virtualHost]['errordocumentroot']
@@ -490,7 +490,7 @@ class HttpRequest:
 		self.response.contentType = 'text/plain'
 		self.response.contentLength = len(errorMessage)
 		self.generateResponseHeaderMessage()
-		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, errorMessage))
+		self.logError('%i %s: %s' % (self.response.statusCode, self.response.statusMessage, errorMessage))
 		self.response.connectionClose = True
 		self.appendResponseMessageBody(errorMessage)
 
@@ -502,7 +502,7 @@ class HttpRequest:
 		self.response.contentType = 'text/plain'
 		self.response.contentLength = len(errorMessage)
 		self.generateResponseHeaderMessage()
-		self.logError('%i - %s - %s' % (self.response.statusCode, self.response.statusMessage, errorMessage))
+		self.logError('%i %s: %s' % (self.response.statusCode, self.response.statusMessage, errorMessage))
 		self.response.connectionClose = True
 		self.appendResponseMessageBody(errorMessage)
 
@@ -814,11 +814,13 @@ class HttpRequest:
 			host = self.request.host
 		if self.request.method != None and self.request.uri != None and self.request.protocol != None:
 			req = self.request.method + ' ' + self.request.uri + ' ' + self.request.protocol
-		logging.getLogger(self.request.virtualHost).info('[Client: %s] [Host: %s:%i] [Request: %s] [Referer: %s] [User-Agent: %s] [Status: %i] [Content-Length: %i]' % (self.request.remoteAddr, host, self.request.serverPort, req, referer, useragent, self.response.statusCode, self.response.contentLength))
+
+		logging.getLogger(self.request.virtualHost).info('%s:%i %s - - [%s] "%s" %i %i "%s" "%s"' % (host,self.request.serverPort,self.request.remoteAddr,strftime("%d/%b/%Y:%H:%M:%S %z"),req,self.response.statusCode,self.response.contentLength,referer,useragent))
+
 
 	# log into error-log file
 	def logError(self, message):
-		logging.getLogger(self.request.virtualHost).error(message)
+		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
 
 # This class provides an execution environment to the CGI script, which monitors the time it takes and aborts the script if it takes too long
 class CGIExecutor():
