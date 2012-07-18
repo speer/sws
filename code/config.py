@@ -105,7 +105,7 @@ class SwsConfiguration:
 			'directory':{
 				'/':{
 					'directoryindex':[],
-					'cgihandler':[]
+					'cgihandler':[],
 				}
 			}
 		}
@@ -277,7 +277,7 @@ class SwsConfiguration:
 					if curDirectory not in self.virtualHosts[vHost]['directory'].keys():
 						d = {
 							'directoryindex':[],
-							'cgihandler':[]
+							'cgihandler':[],
 						}
 						self.virtualHosts[vHost]['directory'][curDirectory] = d
 					continue
@@ -319,6 +319,9 @@ class SwsConfiguration:
 				if directive not in ['errordocument','directoryindex','serveralias','cgihandler'] and len(fields) != 2:
 					return (False, 'Syntax error in configuration directive: '+line,35)
 
+				if directive in ['cgihandler'] and len(fields) > 3:
+					return (False, 'Syntax error in configuration directive: '+line,47)
+
 				# multiple values
 				if directive in ['serveralias']:
 					first = False
@@ -330,13 +333,31 @@ class SwsConfiguration:
 					continue
 
 				# multiple values in <directory>
-				if directive in ['directoryindex','cgihandler']:
+				if directive in ['directoryindex']:
 					first = False
 					for field in fields:
 						if not first:
 							first = True
 							continue
 						self.virtualHosts[vHost]['directory'][curDirectory][directive].append(field)
+					continue
+
+				# cgihandler
+				if directive in ['cgihandler']:
+					extension = fields[1]
+					if not extension.startswith('.'):
+						extension = '.' + extension
+					if '/' in extension:
+						return (False,'Syntax error in configuration directive: '+line,44)
+					executor = None
+					if len(fields) == 3:
+						executor = os.path.abspath(fields[2])
+						if not os.path.isfile(executor):	
+							return (False,'CGI Executor could not be found: '+executor,45)
+						if not os.access(executor,os.X_OK):	
+							return (False,'CGI Executor is not an executable file: '+executor,46)
+
+					self.virtualHosts[vHost]['directory'][curDirectory][directive].append({'extension':extension,'executor':executor})
 					continue
 
 				# directory

@@ -185,6 +185,26 @@ class ConfigTestCase (unittest.TestCase):
 		c = config.SwsConfiguration(testfolder)
 		assert c.parseFile()[2] == 43
 
+	def testConfigVHWrongHandler(self):
+		testfolder = self.CONFIG_FOLDER + '/t35'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 44
+
+	def testConfigVHWrongExecutor(self):
+		testfolder = self.CONFIG_FOLDER + '/t36'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 45
+
+	def testConfigVHWrongExecutor2(self):
+		testfolder = self.CONFIG_FOLDER + '/t37'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 46
+
+	def testConfigVHWrongExecutor3(self):
+		testfolder = self.CONFIG_FOLDER + '/t38'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 47
+
 	def testConfigFileOK(self):
 		testfolder = self.CONFIG_FOLDER + '/t50'
 		c = config.SwsConfiguration(testfolder)
@@ -243,9 +263,10 @@ class ConfigTestCase (unittest.TestCase):
 		assert c.virtualHosts[vH1]['errordocument'][500] == '500.html'
 		assert len(c.virtualHosts[vH1]['directory']) == 4
 		assert len(c.virtualHosts[vH1]['directory']['/']['cgihandler']) == 1
-		assert c.virtualHosts[vH1]['directory']['/']['cgihandler'][0] == '.asp'
+		assert c.virtualHosts[vH1]['directory']['/']['cgihandler'][0]['extension'] == '.asp'
 		assert len(c.virtualHosts[vH1]['directory']) == 4
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2] == '.sh3'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2]['extension'] == '.sh3'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2]['executor'] == '/bin/bash'
 		# test VH2
 		assert c.virtualHosts[vH2]['serveradmin'] == ''
 		assert c.virtualHosts[vH2]['servername'] == 'watten.org'

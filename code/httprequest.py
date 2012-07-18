@@ -57,6 +57,8 @@ class Request:
 		self.virtualHost = None
 		# cgi directory matching the request
 		self.cgiDirectory = None
+		# executor for the cgi request (ex /bin/bash)
+		self.cgiExecutor = None
 		# list of matching directory directives for this request
 		self.directoryChain = ['/']
 
@@ -343,6 +345,8 @@ class HttpRequest:
 	# uses the magic library to determine the mimetype of a file
 	# it does not look at the file extension, but at the content of the file
 	def getContentTypeFromFile(self,filename):
+		if filename.endswith('.css'):
+			return 'text/css'
 		try:
 			mime = magic.Magic(mime=True)
 			mime_encoding = magic.Magic(mime_encoding=True)
@@ -573,6 +577,7 @@ class HttpRequest:
 	# checks if request is a cgi-request (according to handler (ex. .pl, .sh, etc.))
 	def checkRequest(self):
 		self.request.cgiDirectory = None
+		self.request.cgiExecutor = None
 		# check for matching folders
 		for directory in self.request.directoryChain:
 			# if no cgi-handler in current directory, search again one level up
@@ -599,9 +604,10 @@ class HttpRequest:
 				return 404
 
 		if self.request.cgiDirectory != None:
-			# check file extension
-			for extension in self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.cgiDirectory]['cgihandler']:
-				if self.request.filepath.endswith(extension):
+			# check file extension and determine executor
+			for handler in self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.cgiDirectory]['cgihandler']:
+				if self.request.filepath.endswith(handler['extension']):
+					self.request.cgiExecutor = handler['executor']
 					return -1
 
 		return -2
@@ -664,8 +670,8 @@ class HttpRequest:
 	# processes a CGI script request
 	def processCGI(self):
 		try:
-			# check whether resource is an executable file
-	        	if not os.access(self.request.filepath, os.X_OK):
+			# check whether resource is an executable file (if no cgi executor set)
+	        	if self.request.cgiExecutor == None and not os.access(self.request.filepath, os.X_OK):
 				self.sendError(500,'CGI Script is not an executable file')
 				return
 
@@ -822,6 +828,8 @@ class HttpRequest:
 	def logError(self, message):
 		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
 
+
+
 # This class provides an execution environment to the CGI script, which monitors the time it takes and aborts the script if it takes too long
 class CGIExecutor():
 
@@ -840,18 +848,26 @@ class CGIExecutor():
 		
 		# executed in a separate thread
 		def cgiThread():
+			args = [self.request.request.filepath]
+			if self.request.request.cgiExecutor != None:
+				# use executor to run script
+				args = [self.request.request.cgiExecutor,self.request.request.filepath]
+
 			# creates a new process, running the script
-	        	self.process = subprocess.Popen([self.request.request.filepath],stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE,env=self.request.request.cgiEnv)
+			try:
+			        self.process = subprocess.Popen(args,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE,env=self.request.request.cgiEnv)
 
-			# eventual POST data goes to stdin
-			if self.request.request.body != '':
-				self.process.stdin.write(self.request.request.body)
+				# eventual POST data goes to stdin
+				if self.request.request.body != '':
+					self.process.stdin.write(self.request.request.body)
 
-			# the response is on standardoutput
-			self.response, errorData = self.process.communicate()
-			# if some data is available on standarderror, log to errorlog
-			if errorData != None and errorData != '':
-				self.request.logError(errorData.replace('\n',''))
+				# the response is on standardoutput
+				self.response, errorData = self.process.communicate()
+				# if some data is available on standarderror, log to errorlog
+				if errorData != None and errorData != '':
+					self.request.logError(errorData.replace('\n',''))
+			except:
+				pass
 
 		thread = threading.Thread(target=cgiThread)
 		thread.start()
