@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 
-while () {
+while (<STDIN>) {
 
 $_ =~ s/Gug/Hallo/g;
 print $_;

@@ -59,6 +59,8 @@ class Request:
 		self.cgiDirectory = None
 		# executor for the cgi request (ex /bin/bash)
 		self.cgiExecutor = None
+		# directory matching an output filter
+		self.outputFilterDirectory = None
 		# list of matching directory directives for this request
 		self.directoryChain = ['/']
 
@@ -123,6 +125,18 @@ class Response:
 
 	def setCGIHeader(self,key,value):
 		self.cgiHeaders[key.title()] = value
+
+	def getBody(self):
+		if self.flushed:
+			return self.message
+		else:
+			return self.message[self.message.find('\r\n\r\n')+4:]
+
+	def setBody(self, body):
+		if self.flushed:
+			self.message = body
+		else:
+			self.message = self.message[:self.message.find('\r\n\r\n')+4] + body
 
 
 # This class contains the main HTTP functionality (parsing, etc.)
@@ -418,7 +432,7 @@ class HttpRequest:
 		if self.response.contentLength > 0:
 			self.response.setHeader('Content-Length', str(self.response.contentLength))
 
-		# set content-length if not a cgi script
+		# set content-type if not a cgi script
 		if len(self.response.cgiHeaders) == 0:
 			self.response.setHeader('Content-Type', self.response.contentType)
 		else:
@@ -532,6 +546,9 @@ class HttpRequest:
 	# sends a pickled request/response wrapper object to the listener process
 	# if closeConnection is set, that means that the connection will be closed after sending
 	def flushResponseToListener(self, closeConnection=False):
+
+		self.processOutput()
+
 		try:
 			self.response.connectionClose = closeConnection
 			self.connection.send(self.pickle())
@@ -585,6 +602,7 @@ class HttpRequest:
 	def checkRequest(self):
 		self.request.cgiDirectory = None
 		self.request.cgiExecutor = None
+		self.request.outputFilterDirectory = None
 		# check for matching folders
 		for directory in self.request.directoryChain:
 			# if no cgi-handler in current directory, search again one level up
@@ -592,6 +610,15 @@ class HttpRequest:
 				continue
 			# if cgi-handler specified, set cgiDirectory and stop
 			self.request.cgiDirectory = directory
+			break
+
+		# check for matching folders
+		for directory in self.request.directoryChain:
+			# if no output filter in current directory, search again one level up
+			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['setoutputfilter']) == 0:
+				continue
+			# if output filter specified, set outputFilterDirectory and stop
+			self.request.outputFilterDirectory = directory
 			break
 
 		# request is inside a cgi directory
@@ -835,6 +862,21 @@ class HttpRequest:
 	def logError(self, message):
 		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
 
+
+	def processOutput(self):
+		if self.response.statusCode != 200 or self.request.outputFilterDirectory == None:
+			return
+		filter1 = self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.outputFilterDirectory]['setoutputfilter'][0]
+		script1 = self.config.virtualHosts[self.request.virtualHost]['extfilterdefine'][filter1]
+		process = subprocess.Popen(script1,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+		# response goes to stdin
+		process.stdin.write(self.response.getBody())
+		# the response is on standardoutput
+		body, errorData = process.communicate()
+		self.response.setBody(body)
+		# if some data is available on standarderror, log to errorlog
+		if errorData != None and errorData != '':
+			self.logError(errorData.replace('\n',''))
 
 
 # This class provides an execution environment to the CGI script, which monitors the time it takes and aborts the script if it takes too long

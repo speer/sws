@@ -351,7 +351,7 @@ class SwsConfiguration:
 						return (False, 'Syntax error in configuration directive: '+line,50)
 					if fields[1] in self.virtualHosts[vHost][directive].keys():
 						return (False, 'Duplicate filter definition: '+line,51)
-					self.virtualHosts[vHost][directive][fields[1]] = m.group(1)
+					self.virtualHosts[vHost][directive][fields[1]] = m.group(1).split()
 					continue
 
 				if directive in ['setoutputfilter']:

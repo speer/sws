@@ -303,8 +303,9 @@ class ConfigTestCase (unittest.TestCase):
 		assert c.virtualHosts[vH1]['addtype'][1]['extension'] == '.html'
 		assert c.virtualHosts[vH1]['addtype'][1]['type'] == 'text/html'
 		assert len(c.virtualHosts[vH1]['extfilterdefine']) == 2
-		assert c.virtualHosts[vH1]['extfilterdefine']['test1'] == '/bin/test1'
-		assert c.virtualHosts[vH1]['extfilterdefine']['test2'] == '/bin/test2'
+		assert c.virtualHosts[vH1]['extfilterdefine']['test1'][0] == '/bin/test1'
+		assert c.virtualHosts[vH1]['extfilterdefine']['test1'][1] == 'param'
+		assert c.virtualHosts[vH1]['extfilterdefine']['test2'][0] == '/bin/test2'
 		assert len(c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter']) == 3
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][0] == 'test1'
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][1] == 'test2'
