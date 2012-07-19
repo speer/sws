@@ -215,6 +215,26 @@ class ConfigTestCase (unittest.TestCase):
 		c = config.SwsConfiguration(testfolder)
 		assert c.parseFile()[2] == 48
 
+	def testConfigVHWrongFilter1(self):
+		testfolder = self.CONFIG_FOLDER + '/t41'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 50
+
+	def testConfigVHWrongFilter2(self):
+		testfolder = self.CONFIG_FOLDER + '/t42'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 51
+
+	def testConfigVHWrongFilter3(self):
+		testfolder = self.CONFIG_FOLDER + '/t43'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 52
+
+	def testConfigVHWrongFilter4(self):
+		testfolder = self.CONFIG_FOLDER + '/t44'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 53
+
 	def testConfigFileOK(self):
 		testfolder = self.CONFIG_FOLDER + '/t50'
 		c = config.SwsConfiguration(testfolder)
@@ -277,6 +297,19 @@ class ConfigTestCase (unittest.TestCase):
 		assert len(c.virtualHosts[vH1]['directory']) == 4
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2]['extension'] == '.sh3'
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2]['executor'] == '/bin/bash'
+		assert len(c.virtualHosts[vH1]['addtype']) == 2
+		assert c.virtualHosts[vH1]['addtype'][0]['extension'] == '.css'
+		assert c.virtualHosts[vH1]['addtype'][0]['type'] == 'text/css'
+		assert c.virtualHosts[vH1]['addtype'][1]['extension'] == '.html'
+		assert c.virtualHosts[vH1]['addtype'][1]['type'] == 'text/html'
+		assert len(c.virtualHosts[vH1]['extfilterdefine']) == 2
+		assert c.virtualHosts[vH1]['extfilterdefine']['test1'] == '/bin/test1'
+		assert c.virtualHosts[vH1]['extfilterdefine']['test2'] == '/bin/test2'
+		assert len(c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter']) == 3
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][0] == 'test1'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][1] == 'test2'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][2] == 'test1'
+		
 		# test VH2
 		assert c.virtualHosts[vH2]['serveradmin'] == ''
 		assert c.virtualHosts[vH2]['servername'] == 'watten.org'

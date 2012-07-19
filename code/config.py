@@ -107,9 +107,11 @@ class SwsConfiguration:
 				'/':{
 					'directoryindex':[],
 					'cgihandler':[],
+					'setoutputfilter':[]
 				}
 			},
-			'addtype':[]
+			'addtype':[],
+			'extfilterdefine':{}
 		}
 
 
@@ -290,6 +292,7 @@ class SwsConfiguration:
 						d = {
 							'directoryindex':[],
 							'cgihandler':[],
+							'setoutputfilter':[]
 						}
 						self.virtualHosts[vHost]['directory'][curDirectory] = d
 					continue
@@ -308,7 +311,7 @@ class SwsConfiguration:
 	
 				directive = fields[0].lower()
 
-				if directoryOpen and directive not in ['directoryindex','cgihandler']:
+				if directoryOpen and directive not in ['directoryindex','cgihandler','setoutputfilter']:
 					return (False,'Directive not allowed in <Directory>: '+directive,30)
 
 				# defaultvirtualhost
@@ -328,11 +331,38 @@ class SwsConfiguration:
 				if directive in ['errordocument','addtype'] and len(fields) != 3:
 					return (False, 'Syntax error in configuration directive: '+line,34)
 
-				if directive not in ['errordocument','directoryindex','serveralias','cgihandler','addtype'] and len(fields) != 2:
+				if directive not in ['errordocument','directoryindex','serveralias','cgihandler','addtype','extfilterdefine'] and len(fields) != 2:
 					return (False, 'Syntax error in configuration directive: '+line,35)
 
 				if directive in ['cgihandler'] and len(fields) > 3:
 					return (False, 'Syntax error in configuration directive: '+line,47)
+
+				if directive in ['extfilterdefine']:
+					args = ''
+					i = 2
+					while i < len(fields):
+						if i != 2:
+							args = args + ' ' + fields[i]
+						else:
+							args = args + fields[i]
+						i = i + 1
+					m = re.match(r'cmd\s*=\s*"(.+)"',args,re.DOTALL)
+					if m == None:
+						return (False, 'Syntax error in configuration directive: '+line,50)
+					if fields[1] in self.virtualHosts[vHost][directive].keys():
+						return (False, 'Duplicate filter definition: '+line,51)
+					self.virtualHosts[vHost][directive][fields[1]] = m.group(1)
+					continue
+
+				if directive in ['setoutputfilter']:
+					if len(self.virtualHosts[vHost]['directory'][curDirectory][directive]) != 0:
+						return (False, 'Not allowed to define multiple filter chains in one directory: '+line,52)
+					filters = fields[1].split(';')
+					for f in filters:
+						if f not in self.virtualHosts[vHost]['extfilterdefine'].keys():
+							return (False, 'Unknown filter: '+f,53)
+						self.virtualHosts[vHost]['directory'][curDirectory][directive].append(f)
+					continue
 
 				# multiple values
 				if directive in ['serveralias']:
