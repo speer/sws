@@ -45,7 +45,8 @@ class SwsConfiguration:
 				500:{'msg':'Internal Server Error','defaulttxt':'Status 500 - Internal Server Error','file':None}
 			},
 			'errorlogfile':None,
-			'accesslogfile':None
+			'accesslogfile':None,
+			'addtype':[]
 		}
 		# obejct containing the configurations for every virtualhost
 		self.virtualHosts = {}
@@ -107,7 +108,8 @@ class SwsConfiguration:
 					'directoryindex':[],
 					'cgihandler':[],
 				}
-			}
+			},
+			'addtype':[]
 		}
 
 
@@ -139,10 +141,10 @@ class SwsConfiguration:
 			if directive not in self.configurations.keys():
 				return (False, 'Unknown configuration directive: '+line,14)
 
-			if directive in ['errordocument'] and len(fields) != 3:
+			if directive in ['errordocument','addtype'] and len(fields) != 3:
 				return (False, 'Syntax error in configuration directive: '+line,15)
 
-			if directive not in ['errordocument'] and len(fields) != 2:
+			if directive not in ['errordocument','addtype'] and len(fields) != 2:
 				return (False, 'Syntax error in configuration directive: '+line,16)
 
 			# integer directives
@@ -185,6 +187,16 @@ class SwsConfiguration:
 				if not os.path.isdir(filepath[:pos]):
 					return (False, 'Folder does not exist: '+filepath[:pos],21)
 				self.configurations[directive] = filepath
+				continue
+
+			# addtype
+			if directive in ['addtype']:
+				extension = fields[1]
+				if not extension.startswith('.'):
+					extension = '.' + extension
+				if '/' in extension:
+					return (False,'Syntax error in configuration directive: '+line,49)
+				self.configurations[directive].append({'extension':extension,'type':fields[2]})
 				continue
 	
 			# directory
@@ -313,10 +325,10 @@ class SwsConfiguration:
 				if len(fields) < 2:
 					return (False, 'Syntax error in configuration directive: '+line,33)
 
-				if directive in ['errordocument'] and len(fields) != 3:
+				if directive in ['errordocument','addtype'] and len(fields) != 3:
 					return (False, 'Syntax error in configuration directive: '+line,34)
 
-				if directive not in ['errordocument','directoryindex','serveralias','cgihandler'] and len(fields) != 2:
+				if directive not in ['errordocument','directoryindex','serveralias','cgihandler','addtype'] and len(fields) != 2:
 					return (False, 'Syntax error in configuration directive: '+line,35)
 
 				if directive in ['cgihandler'] and len(fields) > 3:
@@ -377,6 +389,16 @@ class SwsConfiguration:
 					if not code in self.configurations[directive].keys():
 						return (False, 'Error code not supported by server: '+line,38)
 					self.virtualHosts[vHost]['errordocument'][code] = fields[2]
+					continue
+
+				# addtype
+				if directive in ['addtype']:
+					extension = fields[1]
+					if not extension.startswith('.'):
+						extension = '.' + extension
+					if '/' in extension:
+						return (False,'Syntax error in configuration directive: '+line,48)
+					self.virtualHosts[vHost][directive].append({'extension':extension,'type':fields[2]})
 					continue
 
 				# file

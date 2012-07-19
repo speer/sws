@@ -344,9 +344,16 @@ class HttpRequest:
 
 	# uses the magic library to determine the mimetype of a file
 	# it does not look at the file extension, but at the content of the file
+	# if addtype directive specified, its content type will be used
 	def getContentTypeFromFile(self,filename):
-		if filename.endswith('.css'):
-			return 'text/css'
+		if self.request.virtualHost != None:
+			for typ in self.config.virtualHosts[self.request.virtualHost]['addtype']:
+				if filename.endswith(typ['extension']):
+					return typ['type']
+
+		for typ in self.config.configurations['addtype']:
+			if filename.endswith(typ['extension']):
+				return typ['type']
 		try:
 			mime = magic.Magic(mime=True)
 			mime_encoding = magic.Magic(mime_encoding=True)

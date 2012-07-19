@@ -205,6 +205,16 @@ class ConfigTestCase (unittest.TestCase):
 		c = config.SwsConfiguration(testfolder)
 		assert c.parseFile()[2] == 47
 
+	def testConfigVHWrongAddType(self):
+		testfolder = self.CONFIG_FOLDER + '/t39'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 49
+
+	def testConfigMainWrongAddType(self):
+		testfolder = self.CONFIG_FOLDER + '/t40'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 48
+
 	def testConfigFileOK(self):
 		testfolder = self.CONFIG_FOLDER + '/t50'
 		c = config.SwsConfiguration(testfolder)
