@@ -450,11 +450,12 @@ class HttpRequest:
 	# sends an error back to the listener process
 	# if an errorMessage is provided, this message will be shown instead of the errorDocument
 	def sendError(self, errorCode, errorMessage=None):
+
 		# if headers have been sent already, don't sent errordocument
 		if self.response.flushed:
 			return
 
-		if self.response.statusCode != 200:
+		if self.response.statusCode >= 400:
 			# preventing recursions (ex. processCGI calls sendError)
 			raise Exception
 
@@ -463,7 +464,9 @@ class HttpRequest:
 			self.response.statusCode = errorCode
 		else:
 			self.response.statusCode = 500
+
 		self.response.statusMessage = self.config.configurations['errordocument'][self.response.statusCode]['msg']
+
 		eMsg = errorMessage
 		if eMsg == None:
 			eMsg = ''
@@ -474,6 +477,7 @@ class HttpRequest:
 
 		errorFile = self.config.virtualHosts[self.request.virtualHost]['errordocument'][self.response.statusCode]
 		errorRoot = self.config.virtualHosts[self.request.virtualHost]['errordocumentroot']
+
 		if errorFile != None:
 			errorFile = path.abspath(errorRoot + sep + errorFile)
 
@@ -490,9 +494,10 @@ class HttpRequest:
 				try:
 					if typ == -1:
 						self.processCGI()
+						return
 					elif typ == -2:
 						self.processDocument()
-					return
+						return
 				except:
 					if self.response.flushed:
 						return
@@ -622,7 +627,8 @@ class HttpRequest:
 			break
 
 		# request is inside a cgi directory
-		if self.request.cgiDirectory != None:
+		if self.request.cgiDirectory != None and self.response.statusCode < 400:
+			# check pathinfo for regular requests, not used for errordocuments
 			self.checkPathInfoCGI()
 
 		# check directoryIndex if path is a directory
@@ -670,6 +676,8 @@ class HttpRequest:
 	# processes a normal resource request
 	def processDocument(self):
 		try:
+			# privilege separation
+			self.removePrivileges()
 			self.response.contentType = self.getContentTypeFromFile(self.request.filepath)
 			self.response.contentLength = os.path.getsize(self.request.filepath)
 			self.generateResponseHeaderMessage()
@@ -701,25 +709,30 @@ class HttpRequest:
 		f.close()
 
 
+	def removePrivileges(self):
+		st = os.stat(self.request.filepath)
+		# don't remove privileges if process has already limited privileges
+		if os.getuid() == 0:
+			# if file is owned by root try to access is as default user
+			if st.st_uid == 0:
+				# default user
+				os.setgid(self.config.configurations['group'])
+				os.setuid(self.config.configurations['user'])
+			else:
+				# file owner user
+				os.setgid(st.st_gid)
+				os.setuid(st.st_uid)
+
+
 	# processes a CGI script request
 	def processCGI(self):
 		try:
+			self.removePrivileges()
+
 			# check whether resource is an executable file (if no cgi executor set)
 	        	if self.request.cgiExecutor == None and not os.access(self.request.filepath, os.X_OK):
-				self.sendError(500,'CGI Script is not an executable file')
+				self.sendError(500,'CGI Script is not accessible/executable')
 				return
-
-			# check if resource is owned by someone except root
-			st = os.stat(self.request.filepath)
-			if st.st_uid == 0:
-				self.sendError(500,'CGI Script owned by root')
-				return
-
-			# don't remove privileges if errordocument is accessed, process has already limited privileges
-			if self.response.statusCode == 200:
-				# remove privileges
-				os.setgid(st.st_gid)
-				os.setuid(st.st_uid)
 
 			# generate environment variables for the CGI script
 			self.generateCGIEnvironment()
@@ -730,7 +743,6 @@ class HttpRequest:
 			# if execution was successful and no error was sent already
 			if status == -1:
 				self.sendError(500,'CGI Script aborted because of timeout')
-			
 		except:
 			# Exception raised by the CGI executor
 			self.sendError(500,'CGI script execution aborted')
@@ -948,15 +960,14 @@ class OutputFilterProcessor:
 		self.request = request
 		self.message = ''
 		self.outputFilterDirectory = None
-		self.currentFilter = 0
+		self.currentFilter = None
+		self.process = None
 
 
 	def getBody(self):
 		pos = self.message.find('\r\n\r\n')
 		if pos == -1:
 			return ''
-		if self.flushed:
-			return self.message
 		else:
 			return self.message[pos+4:]
 
@@ -964,41 +975,46 @@ class OutputFilterProcessor:
 		pos = self.message.find('\r\n\r\n')
 		if pos == -1:
 			return
-		if self.flushed:
-			self.message = body
 		else:
 			self.message = self.message[:pos+4] + body
 
 	def execute(self):
-		if self.request.response.statusCode != 200 or self.outputFilterDirectory == None:
+		if self.request.response.statusCode >= 400 or self.outputFilterDirectory == None:
 			return True
 		
-		def runFilter(self,f):
-			script = self.request.config.virtualHosts[self.request.virtualHost]['extfilterdefine'][f]
-			process = subprocess.Popen(script,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
-			# response goes to stdin
-			process.stdin.write(self.getBody())
-			# the response is on standardoutput
-			body, errorData = process.communicate()
-			self.setBody(body)
-			# if some data is available on standarderror, log to errorlog
-			if errorData != None and errorData != '':
-				self.request.logError(errorData.replace('\n',''))
+		def runFilter():
+			try:
+				script = self.request.config.virtualHosts[self.request.request.virtualHost]['extfilterdefine'][self.currentFilter]
+				self.process = subprocess.Popen(script,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+				# response body goes to stdin
+				self.process.stdin.write(self.getBody())
+				# the response is on standardoutput
+				body, errorData = self.process.communicate()
+				self.setBody(body)
+				# if some data is available on standarderror, log to errorlog
+				if errorData != None and errorData != '':
+					self.request.logError(errorData.replace('\n',''))
+			except:
+				self.request.sendError(500,'Error executing filter '+self.currentFilter)
 
 		if self.request.response.connectionClose:
+			self.message = self.message + self.request.response.message
 			# all data received
 			# run one filter after the other
-			for f in self.request.config.virtualHosts[self.request.virtualHost]['directory'][self.outputFilterDirectory]['setoutputfilter']:
-				print f
-				runFilter(f)
-#				thread = threading.Thread(target=runfilter,f)
-#				thread.start()
-#				thread.join(self.request.config.configurations['cgitimeout'])
+			for f in self.request.config.virtualHosts[self.request.request.virtualHost]['directory'][self.outputFilterDirectory]['setoutputfilter']:
+				self.currentFilter = f
+				thread = threading.Thread(target=runFilter)
+				thread.start()
+				thread.join(self.request.config.configurations['cgitimeout'])
 				# if thread is still alive after timeout means that the script took to long
-#				if thread.is_alive():
-#					self.process.terminate()
-#					thread.join()
-					# send error message
+				if thread.is_alive():
+					self.process.terminate()
+					thread.join()
+					self.request.sendError(500,'Filter aborted because of timeout '+self.currentFilter)
+
+				if self.request.response.statusCode >= 400:
+					# break if an error occurred
+					return False
 
 			self.request.response.message = self.message
 			return True

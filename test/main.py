@@ -506,14 +506,30 @@ class ServerTestCase (unittest.TestCase):
 			connection.close()
 
 
-	def testLocalhostCGIByRoot(self):
+	def testLocalhostCGIByRootNoAccess(self):
 		for method in self.METHODS:
 			connection = httplib.HTTPConnection('localhost', self.PORT)
 			connection.connect()
-			# script owned by root -> internal server error
+			# script owned by root and no access privileges for default user
 			connection.request(method,'/cgi-bin/env.pl')
 			response = connection.getresponse()
 			assert response.status == 500
+			connection.close()
+
+	def testLocalhostCGIByRootAccess(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			# script owned by root and access privileges for default user (stefan)
+			connection.request(method,'/cgi-bin/executor2.sh')
+			response = connection.getresponse()
+			assert response.status == 200
+			data = response.read()
+			data = data.strip()
+			if method == 'HEAD':
+				assert data == ''
+			else:
+				assert data == 'stefan'
 			connection.close()
 
 
