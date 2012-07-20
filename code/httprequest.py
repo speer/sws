@@ -724,7 +724,7 @@ class HttpRequest:
 				return
 
 			# don't remove privileges if errordocument is accessed, process has already limited privileges
-			if self.response.statusCode != 200:
+			if self.response.statusCode == 200:
 				# remove privileges
 				os.setgid(st.st_gid)
 				os.setuid(st.st_uid)
