@@ -1043,3 +1043,138 @@ CGI Executor could not be found: /.sh
 [Thu Jul 19 06:02:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
 [Thu Jul 19 06:02:54 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
 [Thu Jul 19 06:02:54 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:35:22 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:35:22 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:35:22 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:35:22 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:35:22 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:35:22 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:35:23 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:35:24 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:35:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:35:26 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:35:27 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:35:28 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:42:16 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:42:16 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:42:16 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:42:16 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:42:17 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:42:17 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:42:18 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:42:19 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:42:20 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:42:21 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:42:22 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:43:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:43:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:43:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:43:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:43:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:43:32 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:43:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:43:34 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:43:35 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:43:36 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:43:37 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:45:00 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:45:00 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:45:00 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:45:00 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:45:00 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:45:00 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:45:01 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:45:02 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:45:03 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:45:04 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:45:05 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:45:06 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:46:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:46:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:46:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 08:46:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:46:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:46:25 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script owned by root: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 08:46:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:46:27 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not an executable file: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:46:28 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 08:46:30 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 08:46:31 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2

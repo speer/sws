@@ -462,6 +462,10 @@ class HttpRequest:
 	# sends an error back to the listener process
 	# if an errorMessage is provided, this message will be shown instead of the errorDocument
 	def sendError(self, errorCode, errorMessage=None):
+		# if headers have been sent already, don't sent errordocument
+		if self.response.flushed:
+			return
+
 		if self.response.statusCode != 200:
 			# preventing recursions (ex. processCGI calls sendError)
 			raise Exception
@@ -731,105 +735,18 @@ class HttpRequest:
 
 			# generate environment variables for the CGI script
 			self.generateCGIEnvironment()
+
 			# execute cgi script - abort timeout of n seconds
-			success, cgiBody = self.parseCGIResponse(CGIExecutor(self).execute(self.config.configurations['cgitimeout']))
+			status = CGIExecutor(self).execute()
+
 			# if execution was successful and no error was sent already
-			if success:
-				self.response.contentLength = len(cgiBody)
-				self.generateResponseHeaderMessage()
-				self.appendResponseMessageBody(cgiBody)
-				self.flushResponseToListener(True)
+			if status == -1:
+				self.sendError(500,'CGI Script aborted because of timeout')
 			
 		except:
-			# Exception will be raised by the CGIExecutor if CGI Script takes to much time
-			self.sendError(500,'CGI script aborted (because of timeout)')
+			# Exception raised by the CGI executor
+			self.sendError(500,'CGI script execution aborted')
 
-
-	# parses the response of the CGI script 
-	# returns the pair (success,cgiBody)
-	def parseCGIResponse(self,document):
-		document = document.lstrip()
-		cgiBody = ''
-		m = re.match(r'((.+)[(\r\n\r\n)(\n\n)])(.*)',document,re.DOTALL)
-		if m != None:
-			# determine end of line character (RFC says \n, but some implementations do \r\n)
-			sep = '\n\n'
-			pos = document.find('\n\n')
-			posRN = document.find('\r\n\r\n')
-			if pos == -1 or posRN != -1 and pos > posRN:
-				pos = posRN
-				sep = '\r\n\r\n'
-
-			header = document[:pos]
-			body = document[pos+len(sep):]
-			# parse header
-			lines = header.split('\n')
-			for line in lines:
-				line = line.strip()
-				line = re.sub('\s{2,}', ' ', line)
-				pos = line.find(':')
-				if pos <= 0 or pos >= len(line)-1:
-					self.sendError(500,'Bad Header in CGI response')
-					return (False,'')
-				key = line[0:pos].strip()
-				value = line[pos+1:len(line)].strip()
-				self.response.setCGIHeader(key,value)
-
-			if len(self.response.cgiHeaders) == 0:
-				self.sendError(500,'CGI Script has no headers')
-				return (False,'')
-
-			location = self.response.getCGIHeader('Location')
-			if location == None:
-				# document response (RFC: 6.2.1)
-				if body != None and body != '':
-					if self.response.getCGIHeader('Content-Type') == None:
-						# content-type must be specified
-						self.sendError(500,'CGI Script must specify content type')
-						return (False,'')
-
-					cgiBody = body
-
-				# check for status header field
-				if self.response.getCGIHeader('Status') != None:
-					s = re.match(r'(\d+) (.*)',self.response.getCGIHeader('Status'),re.DOTALL)
-					if s != None:
-						self.response.statusCode = int(s.group(1))
-						self.response.statusMessage = s.group(2)
-
-			else:
-				# redirect response
-				if location.startswith('/'):
-					# local redirect response (RFC: 6.2.2)
-					self.response.reprocess = True
-					newEnv = {}
-					if self.request.cgiPathInfo != None:
-						newEnv['REDIRECT_URL'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):] + self.request.cgiPathInfo
-					else:
-						newEnv['REDIRECT_URL'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):]
-					newEnv['REDIRECT_STATUS'] = str(self.response.statusCode)
-					# rename CGI environment variables
-					for key in self.request.cgiEnv.keys():
-						newEnv['REDIRECT_'+key] = self.request.cgiEnv[key]
-					self.request.cgiEnv = newEnv
-				else:
-					# client redirect response (RFC: 6.2.3, 6.2.4)
-					self.response.statusCode = 302
-					self.response.statusMessage = 'Found'
-					self.response.setHeader('Location',location)
-
-					if body != None and body != '':
-						if self.response.getCGIHeader('Content-Type') == None:
-							# content-type must be specified
-							self.sendError(500,'CGI Script must specify content type')
-							return (False,'')
-						# success
-						cgiBody = body
-		else:
-			self.sendError(500,'CGI returned wrong response')
-			return (False,'')
-
-		return (True,cgiBody)
 
 
 	# checks whether the CGI response contained the Location header and it is a local redirect response
@@ -889,6 +806,89 @@ class HttpRequest:
 			self.logError(errorData.replace('\n',''))
 
 
+	# parses the headers of the CGI script 
+	# returns the pair (success,cgiBody)
+	def parseCGIHeaders(self,document):
+		document = document.lstrip()
+		cgiBody = ''
+
+		# determine end of line character (RFC says \n, but some implementations do \r\n)
+		separator = '\n'
+		pos = document.find('\n\n')
+		posRN = document.find('\r\n\r\n')
+		if pos == -1 or posRN != -1 and pos > posRN:
+			pos = posRN
+			separator = '\r\n'
+
+		header = document[:pos]
+		body = document[pos+len(separator)*2:]
+		# parse header
+		lines = header.split(separator)
+		for line in lines:
+			line = line.strip()
+			line = re.sub('\s{2,}', ' ', line)
+			pos = line.find(':')
+			if pos <= 0 or pos >= len(line)-1:
+				self.sendError(500,'Bad Header in CGI response')
+				return (False,'')
+			key = line[0:pos].strip()
+			value = line[pos+1:len(line)].strip()
+			self.response.setCGIHeader(key,value)
+
+		if len(self.response.cgiHeaders) == 0:
+			self.sendError(500,'CGI Script has no headers')
+			return (False,'')
+
+		location = self.response.getCGIHeader('Location')
+		if location == None:
+			# document response (RFC: 6.2.1)
+			if body != None and body != '':
+				if self.response.getCGIHeader('Content-Type') == None:
+					# content-type must be specified
+					self.sendError(500,'CGI Script must specify content type')
+					return (False,'')
+
+				cgiBody = body
+
+			# check for status header field
+			if self.response.getCGIHeader('Status') != None:
+				s = re.match(r'(\d+) (.*)',self.response.getCGIHeader('Status'),re.DOTALL)
+				if s != None:
+					self.response.statusCode = int(s.group(1))
+					self.response.statusMessage = s.group(2)
+
+		else:
+			# redirect response
+			if location.startswith('/'):
+				# local redirect response (RFC: 6.2.2)
+				self.response.reprocess = True
+				newEnv = {}
+				if self.request.cgiPathInfo != None:
+					newEnv['REDIRECT_URL'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):] + self.request.cgiPathInfo
+				else:
+					newEnv['REDIRECT_URL'] = self.request.filepath[len(self.config.virtualHosts[self.request.virtualHost]['documentroot']):]
+				newEnv['REDIRECT_STATUS'] = str(self.response.statusCode)
+				# rename CGI environment variables
+				for key in self.request.cgiEnv.keys():
+					newEnv['REDIRECT_'+key] = self.request.cgiEnv[key]
+				self.request.cgiEnv = newEnv
+			else:
+				# client redirect response (RFC: 6.2.3, 6.2.4)
+				self.response.statusCode = 302
+				self.response.statusMessage = 'Found'
+				self.response.setHeader('Location',location)
+
+				if body != None and body != '':
+					if self.response.getCGIHeader('Content-Type') == None:
+						# content-type must be specified
+						self.sendError(500,'CGI Script must specify content type')
+						return (False,'')
+					# success
+					cgiBody = body
+
+		return (True,cgiBody)
+
+
 # This class provides an execution environment to the CGI script, which monitors the time it takes and aborts the script if it takes too long
 class CGIExecutor():
 
@@ -897,13 +897,13 @@ class CGIExecutor():
 		self.process = None
 		# HttpRequest object
 		self.request = request
-		# Response of the CGI script
-		self.response = None
+
+
 
 
 	# executes the CGI script in a thread, which creates a new process that executes the requested scriptfile
 	# the thread will cause the process to terminate after a timeout
-	def execute (self, timeout=30):
+	def execute (self):
 		
 		# executed in a separate thread
 		def cgiThread():
@@ -920,21 +920,51 @@ class CGIExecutor():
 				if self.request.request.body != '':
 					self.process.stdin.write(self.request.request.body)
 
-				# the response is on standardoutput
-				self.response, errorData = self.process.communicate()
+				# fetch response blockwise and flush to listener
+				err = 'init'
+				out = self.process.stdout.read(self.request.config.configurations['socketbuffersize'])
+				errorData = ''
+				tmp = ''
+				headerParsed = False
+				success = True
+				while err != '' or out != '':
+					nextOut = self.process.stdout.read(self.request.config.configurations['socketbuffersize'])
+					err = self.process.stderr.read(self.request.config.configurations['socketbuffersize'])
+					errorData = errorData + err
+
+					if not headerParsed:
+						tmp = tmp + out
+						m = re.match(r'((.+)(\r\n\r\n|\n\n))(.*)',tmp,re.DOTALL)
+						if m != None:
+							headerParsed = True
+							success, cgiBody = self.request.parseCGIHeaders(tmp)
+							if success:
+								self.request.generateResponseHeaderMessage()
+								self.request.appendResponseMessageBody(cgiBody)
+								self.request.flushResponseToListener(nextOut == '')
+					else:
+						if success:
+							self.request.appendResponseMessageBody(out)
+							self.request.flushResponseToListener(nextOut == '')
+
+					out = nextOut
+
+				if not self.request.response.flushed:
+					self.request.sendError(500,'Syntax Error in CGI Response')
+
 				# if some data is available on standarderror, log to errorlog
-				if errorData != None and errorData != '':
-					self.request.logError(errorData.replace('\n',''))
+				if errorData.strip() != '':
+					self.request.logError(errorData.replace('\n','').strip())
 			except:
 				pass
 
 		thread = threading.Thread(target=cgiThread)
 		thread.start()
-		thread.join(timeout)
+		thread.join(self.request.config.configurations['cgitimeout'])
 		# if thread is still alive after timeout means that the script took to long
 		if thread.is_alive():
 			self.process.terminate()
 			thread.join()
-			raise Exception
+			return -1
 
-		return self.response
+		return 0
