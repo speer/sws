@@ -59,8 +59,6 @@ class Request:
 		self.cgiDirectory = None
 		# executor for the cgi request (ex /bin/bash)
 		self.cgiExecutor = None
-		# directory matching an output filter
-		self.outputFilterDirectory = None
 		# list of matching directory directives for this request
 		self.directoryChain = ['/']
 
@@ -126,18 +124,6 @@ class Response:
 	def setCGIHeader(self,key,value):
 		self.cgiHeaders[key.title()] = value
 
-	def getBody(self):
-		if self.flushed:
-			return self.message
-		else:
-			return self.message[self.message.find('\r\n\r\n')+4:]
-
-	def setBody(self, body):
-		if self.flushed:
-			self.message = body
-		else:
-			self.message = self.message[:self.message.find('\r\n\r\n')+4] + body
-
 
 # This class contains the main HTTP functionality (parsing, etc.)
 class HttpRequest:
@@ -168,6 +154,8 @@ class HttpRequest:
 		self.headerReceived = False
 		# used to prevent cgi endless recursions
 		self.requestNumber = 1
+		# Output Filter Processor
+		self.ofProcessor = OutputFilterProcessor(self)
 
 	# determines connection specific variables
 	def determineHostVars (self):
@@ -558,12 +546,12 @@ class HttpRequest:
 	# sends a pickled request/response wrapper object to the listener process
 	# if closeConnection is set, that means that the connection will be closed after sending
 	def flushResponseToListener(self, closeConnection=False):
-
-		self.processOutput()
-
 		try:
 			self.response.connectionClose = closeConnection
-			self.connection.send(self.pickle())
+			# ofProcessor acts as a message queue if an output filter is specified
+			# it accumulates the response body data, to be sent in one go to the filter
+			if self.ofProcessor.execute():
+				self.connection.send(self.pickle())
 			self.response.flushed = True
 			self.response.message = ''
 			if closeConnection:
@@ -614,7 +602,7 @@ class HttpRequest:
 	def checkRequest(self):
 		self.request.cgiDirectory = None
 		self.request.cgiExecutor = None
-		self.request.outputFilterDirectory = None
+		self.ofProcessor.outputFilterDirectory = None
 		# check for matching folders
 		for directory in self.request.directoryChain:
 			# if no cgi-handler in current directory, search again one level up
@@ -630,7 +618,7 @@ class HttpRequest:
 			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['setoutputfilter']) == 0:
 				continue
 			# if output filter specified, set outputFilterDirectory and stop
-			self.request.outputFilterDirectory = directory
+			self.ofProcessor.outputFilterDirectory = directory
 			break
 
 		# request is inside a cgi directory
@@ -788,22 +776,6 @@ class HttpRequest:
 	# log into error-log file
 	def logError(self, message):
 		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
-
-
-	def processOutput(self):
-		if self.response.statusCode != 200 or self.request.outputFilterDirectory == None:
-			return
-		filter1 = self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.outputFilterDirectory]['setoutputfilter'][0]
-		script1 = self.config.virtualHosts[self.request.virtualHost]['extfilterdefine'][filter1]
-		process = subprocess.Popen(script1,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
-		# response goes to stdin
-		process.stdin.write(self.response.getBody())
-		# the response is on standardoutput
-		body, errorData = process.communicate()
-		self.response.setBody(body)
-		# if some data is available on standarderror, log to errorlog
-		if errorData != None and errorData != '':
-			self.logError(errorData.replace('\n',''))
 
 
 	# parses the headers of the CGI script 
@@ -968,3 +940,70 @@ class CGIExecutor():
 			return -1
 
 		return 0
+
+
+class OutputFilterProcessor:
+
+	def __init__(self, request):
+		self.request = request
+		self.message = ''
+		self.outputFilterDirectory = None
+		self.currentFilter = 0
+
+
+	def getBody(self):
+		pos = self.message.find('\r\n\r\n')
+		if pos == -1:
+			return ''
+		if self.flushed:
+			return self.message
+		else:
+			return self.message[pos+4:]
+
+	def setBody(self, body):
+		pos = self.message.find('\r\n\r\n')
+		if pos == -1:
+			return
+		if self.flushed:
+			self.message = body
+		else:
+			self.message = self.message[:pos+4] + body
+
+	def execute(self):
+		if self.request.response.statusCode != 200 or self.outputFilterDirectory == None:
+			return True
+		
+		def runFilter(self,f):
+			script = self.request.config.virtualHosts[self.request.virtualHost]['extfilterdefine'][f]
+			process = subprocess.Popen(script,stdout=subprocess.PIPE,stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+			# response goes to stdin
+			process.stdin.write(self.getBody())
+			# the response is on standardoutput
+			body, errorData = process.communicate()
+			self.setBody(body)
+			# if some data is available on standarderror, log to errorlog
+			if errorData != None and errorData != '':
+				self.request.logError(errorData.replace('\n',''))
+
+		if self.request.response.connectionClose:
+			# all data received
+			# run one filter after the other
+			for f in self.request.config.virtualHosts[self.request.virtualHost]['directory'][self.outputFilterDirectory]['setoutputfilter']:
+				print f
+				runFilter(f)
+#				thread = threading.Thread(target=runfilter,f)
+#				thread.start()
+#				thread.join(self.request.config.configurations['cgitimeout'])
+				# if thread is still alive after timeout means that the script took to long
+#				if thread.is_alive():
+#					self.process.terminate()
+#					thread.join()
+					# send error message
+
+			self.request.response.message = self.message
+			return True
+		else:
+			# more data to receive
+			self.message = self.message + self.request.response.message
+			return False
+
