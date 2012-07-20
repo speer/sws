@@ -462,6 +462,10 @@ class HttpRequest:
 	# sends an error back to the listener process
 	# if an errorMessage is provided, this message will be shown instead of the errorDocument
 	def sendError(self, errorCode, errorMessage=None):
+		if self.response.statusCode != 200:
+			# preventing recursions (ex. processCGI calls sendError)
+			raise Exception
+
 		self.response.cgiHeaders = {}
 		if errorCode in self.config.configurations['errordocument'].keys():
 			self.response.statusCode = errorCode
@@ -483,15 +487,19 @@ class HttpRequest:
 
 			# check if errordocument is a valid file and no other message has been set
 			if  self.isJailedInto(errorRoot,errorFile) and os.path.isfile(errorFile):
+				self.request.filepath = errorFile
+
+				# determine chain of matching directories
+				self.determineDirectoryChain()
+
+				# check whether request is a CGI request, check documentroot and file existance
+				typ = self.checkRequest()
+
 				try:
-					self.response.contentType = self.getContentTypeFromFile(errorFile)
-					self.response.contentLength = os.path.getsize(errorFile)
-					self.generateResponseHeaderMessage()
-					# if it is a HEAD request, there is no need to access the errordocument
-					if self.request.method != 'HEAD':
-						self.accessFile(errorFile)
-					else:
-						self.flushResponseToListener(True)
+					if typ == -1:
+						self.processCGI()
+					elif typ == -2:
+						self.processDocument()
 					return
 				except:
 					if self.response.flushed:
@@ -715,9 +723,11 @@ class HttpRequest:
 				self.sendError(500,'CGI Script owned by root')
 				return
 
-			# remove privileges
-			os.setgid(st.st_gid)
-			os.setuid(st.st_uid)
+			# don't remove privileges if errordocument is accessed, process has already limited privileges
+			if self.response.statusCode != 200:
+				# remove privileges
+				os.setgid(st.st_gid)
+				os.setuid(st.st_uid)
 
 			# generate environment variables for the CGI script
 			self.generateCGIEnvironment()
