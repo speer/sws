@@ -1,20 +1,7 @@
 """
 magic is a wrapper around the libmagic file identification library.
 
-See README for more information.
-
-Usage:
-
->>> import magic
->>> magic.from_file("testdata/test.pdf")
-'PDF document, version 1.2'
->>> magic.from_file("testdata/test.pdf", mime=True)
-'application/pdf'
->>> magic.from_buffer(open("testdata/test.pdf").read(1024))
-'PDF document, version 1.2'
->>>
-
-
+See https://github.com/ahupp/python-magic for more information.
 """
 
 import os.path

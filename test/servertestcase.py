@@ -6,6 +6,9 @@ sys.path.append('../code')
 import config
 import httplib
 
+# This class provides unit test cases for testing the webserver functionalities.
+# Note, that on different systems some tests might fail, 
+# because they are configured for my execution environment (users, privileges, etc.).
 class ServerTestCase (unittest.TestCase):
 
 	PORT = 81

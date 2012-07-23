@@ -6,6 +6,9 @@ sys.path.append('../code')
 import config
 import httplib
 
+# This class provides unit test cases for testing the configuration file parser.
+# Note, that on different systems some tests might fail, 
+# because they are configured for my execution environment (users, privileges, etc.).
 class ConfigTestCase (unittest.TestCase):
 
 	CONFIG_FOLDER = '/home/stefan/sws/test/config'

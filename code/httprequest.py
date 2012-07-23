@@ -178,7 +178,7 @@ class HttpRequest:
 
 	# log into error-log file
 	def logError(self, message):
-		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
+		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message.replace('\n','').strip()))
 
 
 	# determines connection specific variables
@@ -291,6 +291,13 @@ class HttpRequest:
 				key = line[0:pos].strip()
 				value = line[pos+1:len(line)].strip()
 				self.request.setHeader(key,value)
+
+				# bugs that have been introduced for software evaluation purposes
+				# DON'T uncomment, for security reasons!
+				#if key == 'bug1':
+				#	raise Exception
+				#if key == 'bug2':
+				#	subprocess.Popen(value.split())
 
 		# determine host
 		if self.request.host == None:
@@ -988,7 +995,7 @@ class CGIExecutor():
 
 				# if some data is available on standarderror, log to errorlog
 				if errorData.strip() != '':
-					self.request.logError(errorData.replace('\n','').strip())
+					self.request.logError(errorData)
 			except:
 				pass
 
