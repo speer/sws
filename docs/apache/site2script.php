@@ -1,5 +1,5 @@
 <?
-$path = '/home/stefan/sws/docs/sws/site1/';
+$path = '/home/stefan/sws/docs/apache/site1/';
 $dir = opendir($path) or die ('cannot open dir');
 while($file = readdir($dir))
 	if($file != '.' && $file != '..')

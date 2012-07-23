@@ -1,15 +1,43 @@
 <html>
 <head>
-<title>My Webpage</title>
+<title>Demo Webpage</title>
+<style type="text/css">
+a {
+	color:#aa3322
+}
+</style>
 </head>
 <body>
-<h1>My webpage</h1>
+<h1>Demo webpage</h1>
 <table>
-<tr>
+<!--<tr>
 <td>Picture:</td>
-<td><img src="pic.jpg" /></td>
+<td><img src="pic.jpg" /></td>-->
 </tr>
-<tr><td><a href="/cgi-bin">CGI</a></td></tr>
+<tr><td><a href="http://php.sws.peerweb.it/">Drupal</a></td></tr>
+<tr><td><a href="http://php.sws.peerweb.it/afhfhlsda">Drupal dynamic Errordocument</a></td></tr>
+<tr><td><a href="http://wiki.sws.peerweb.it/">MediaWiki</a></td></tr>
+<tr><td><a href="http://filter.sws.peerweb.it/">Header/Body Output Filter + gzip Filter</a></td></tr>
+<tr><td><a href="http://webalizer.sws.peerweb.it/">Webalizer Log Statistics</a></td></tr>
+<tr><td>Privilege Separation SWS:</td></tr>
+<tr><td><a href="http://site2.sws.peerweb.it/site2script.php">site2 tries to copy site1</a></td></tr>
+<tr><td><a href="http://site1.sws.peerweb.it/site1script.php">site1 tries to delete site2</a></td></tr>
+<tr><td>Privilege Separation Apache:</td></tr>
+<tr><td><a href="http://site2.sws.peerweb.it:8080/site2script.php">site2 tries to copy site1</a></td></tr>
+<tr><td><a href="http://site1.sws.peerweb.it:8080/site1script.php">site1 tries to delete site2</a></td></tr>
+<tr><td>CGI Scripts:</td></tr>
+<tr><td><a href="cgi-bin/whoami.sh">Whoami SWS</a></td></tr>
+<tr><td><a href="http://localhost:8080/cgi-bin/whoami.sh">Whoami Apache</a></td></tr>
+<tr><td><a href="cgi-bin/env.pl">CGI Environment Variables SWS</a></td></tr>
+<tr><td><a href="http://localhost:8080/cgi-bin/env.pl">CGI Environment Variables Apache</a></td></tr>
+<tr><td><a href="cgi-bin/loc.pl">Client Redirect</a></td></tr>
+<tr><td><a href="cgi-bin/loc2.pl">Server Redirect</a></td></tr>
+<tr><td><a href="cgi-bin/loc3.pl">Endless Redirect</a></td></tr>
+<tr><td><a href="cgi-bin/forever.sh">Endless Script</a></td></tr>
+<tr><td><a href="cgi-bin/filters/">Text Replacement Filter</a></td></tr>
+<tr><td><a href="cgi-bin/php/test.php">PhpInfo</a></td></tr>
+<tr><td>Show Log Files</td></tr>
+<tr><td>Show Configuration Files</td></tr>
 </table>
 </body>
 </html>
