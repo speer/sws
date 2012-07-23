@@ -16,7 +16,7 @@
 1. About the Project
 2. System Requirements
 3. Installation
-4. Running
+4. Running the software
 
 
 1. About the Project
@@ -60,12 +60,25 @@ performance negatively.
 
 3. Installation
 
-- An installation script has been provided. However note, that the System Requirements
-  must be satisfied.
+3.1 Copy everything from the /code folder into a desired directory
+
+3.2 Edit the /code/sws file and specify the location of the configuration directory
+
+3.3 Inside the configuration directory create file named sws.conf, see example
+    configuration file in /example/sws.conf.
+
+3.4 Inside the configuration directory create a folder named sites-enabled.
+
+3.5 Create at least one virtualhost configuration file (.conf) in the sites-enabled
+    folder (see example in /example/vh.conf).
+
+3.6 Set mandatory configuration directives in sws.conf configuration file and every
+    virtualhost configuration file. For help on directives, see project report.
+    Set settings such as user, group, errordocumentroot, errordocuments,
+    accesslog, errorlog, documentroot, etc.
 
 
-
-4. Running
+4. Running the software
 
 The software can be started using the script called sws, which can be found in the
 /code folder. It supports the commands start, stop and restart.
