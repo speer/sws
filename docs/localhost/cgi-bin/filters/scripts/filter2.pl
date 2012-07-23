@@ -4,7 +4,7 @@ use strict;
 
 while (<STDIN>) {
 
-$_ =~ s/Hallou/Gruesse/g;
+$_ =~ s/WORLD/<h1>WORLD<\/h1>/g;
 print $_;
 
 }

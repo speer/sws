@@ -3,7 +3,7 @@ use strict;
 
 while (<STDIN>) {
 
-$_ =~ s/Gug/Hallo/g;
+$_ =~ s/World/WORLD/g;
 print $_;
 
 }
