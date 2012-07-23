@@ -1,19 +1,23 @@
 #!/usr/bin/python -B
 
+# THIS IS THE SERVER DAEMON'S MAIN CONTROL SCRIPT
+
 import sys, time
 import webserver
 
+# Path where the server configuration file sws.conf and the sites-enabled folder are stored
 CONFIGURATION_PATH = '/home/stefan/sws/config'
+# Path, were the daemon's pid file will be stored
 PID_PATH = '/tmp/sws.peerweb.it.pid'
 
 if __name__ == "__main__":
 	daemon = webserver.SecureWebServer(PID_PATH, CONFIGURATION_PATH)
 	if len(sys.argv) == 2:
-		if 'start' == sys.argv[1]:
+		if 'start' == sys.argv[1].lower():
 			daemon.start()
-		elif 'stop' == sys.argv[1]:
+		elif 'stop' == sys.argv[1].lower():
 			daemon.stop()
-		elif 'restart' == sys.argv[1]:
+		elif 'restart' == sys.argv[1].lower():
 			daemon.restart()
 		else:
 			print "Unknown command"

@@ -1,0 +1,73 @@
+#######################################################################################
+#                                                                                     #
+#                                A SECURE WEB-SERVER                                  #
+#                                                                                     #
+#######################################################################################
+#                                                                                     #
+# MSc Individual Project by Stefan Peer at King's College London, 2012                #
+#                                                                                     #
+# Copyright (c) Stefan Peer, August 2012                                              #
+#                                                                                     #
+# Subversion Repository: svn.sws.peerweb.it                                           #
+# Github Repository:     github.com/speer/sws                                         #
+#                                                                                     #
+#######################################################################################
+
+1. About the Project
+2. System Requirements
+3. Installation
+4. Running
+
+
+1. About the Project
+
+The research project of this thesis comprises the design, implementation and test of a 
+secure web-server. We mainly focused on the implementation of the so called Privilege 
+Separation principles, which state that a program can be split up into several parts 
+with different privilege levels. By applying these principles to a web-server, we 
+wanted to create a system, which behaves in a solid way on attacks of malicious users.
+
+Our server architecture contains three different types of processes, which run with 
+different privileges. In order to obtain maximum security, clients interact just with 
+unprivileged processes, that cannot harm the system. However a privileged process is 
+also needed for performing specific tasks. This process stays in background, isolated 
+from being directly accessed, and cannot therefore be easily taken over by an attacker.
+
+The system was developed using the Python programming language and represents a fully 
+functional web-server, that is able to serve static and dynamic websites. A major 
+challenge during the project has been represented by the asynchronous Interprocess 
+Communication. Privilege Separation split up the program among several processes. 
+Realising the communication between these processes required to take into consideration
+various issues related to concurrency, efficiency and functionality.
+
+The ultimate goal of this thesis project was to understand, whether Privilege 
+Separation can make a web-server more secure. We compared our system, with the world's 
+most used web-server, Apache. The evaluation showed, that Privilege Separation 
+influences the security of a web-server in a positive way, however affects its 
+performance negatively.
+
+
+2. System Requirements
+
+- The software has been tested on Ubuntu 11.04, but should work on any Unix based 
+  operating system, with a kernel version later than 2.5.44.
+
+- It was developed for Python 2.7.1+, and tested using standard CPython.
+
+- The libmagic C library has to be installed on the system, otherwise the mime-type
+  detection will fail.
+
+
+3. Installation
+
+- An installation script has been provided. However note, that the System Requirements
+  must be satisfied.
+
+
+
+4. Running
+
+The software can be started using the script called sws, which can be found in the
+/code folder. It supports the commands start, stop and restart.
+eg. ./sws start
+

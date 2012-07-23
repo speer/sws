@@ -91,7 +91,7 @@ class SecureWebServer (Daemon):
 		success, message, code = self.config.parseFile()
 		if not success:	
 			# log error message
-			logging.getLogger('sws').error('[%s] [error] %s' % (strftime("%a %b %d %H:%M:%S %Y"), message))
+			self.logError(message)
 			return message
 
 		self.rootProcess = None
@@ -105,10 +105,15 @@ class SecureWebServer (Daemon):
 			# disable blocking mode of the listener socket
 			self.listener.setblocking(0)
 		except:
-			logging.getLogger('sws').error('[%s] [error] Could not bind server to port %s' % (strftime("%a %b %d %H:%M:%S %Y"), str(self.config.configurations['listen'])))
-			return 'Could not bind server to port ' + str(self.config.configurations['listen'])
+			msg = 'Could not bind server to port ' + str(self.config.configurations['listen'])
+			self.logError(msg)
+			return msg
 
 		return None
+
+	# logs an error in the server's error log file
+	def logError (self,msg):
+		logging.getLogger('sws').error('[%s] [error] %s' % (strftime("%a %b %d %H:%M:%S %Y"), msg))
 
 	# start the server
 	def run(self):	
@@ -149,158 +154,172 @@ class SecureWebServer (Daemon):
 					# signal sigterm arrived
 					break
 				for fileno, event in self.events:
-					if fileno == self.listener.fileno():
-						# 1. new incoming connection
-						conn, addr = self.listener.accept()
-						conn.setblocking(0)
-						#print 'new connection from',addr
-						self.epoll.register(conn.fileno(), select.EPOLLIN)
-						#print '1. register request:',conn.fileno()
+					try:
+						if fileno == self.listener.fileno():
+							# 1. new incoming connection
+							conn, addr = self.listener.accept()
+							conn.setblocking(0)
+							#print 'new connection from',addr
+							self.epoll.register(conn.fileno(), select.EPOLLIN)
+							#print '1. register request:',conn.fileno()
 
-						# create new request and store it in list
-						request = httprequest.HttpRequest(conn,self.config)
-						# determines some environment variables (IP address, hostname, etc.)
-						request.determineHostVars()
-						requests[conn.fileno()] = request
+							# create new request and store it in list
+							request = httprequest.HttpRequest(conn,self.config)
+							# determines some environment variables (IP address, hostname, etc.)
+							request.determineHostVars()
+							requests[conn.fileno()] = request
 
-					elif event & select.EPOLLIN:
-						# fileno is readable
+						elif event & select.EPOLLIN:
+							# fileno is readable
 
-						if fileno in rootRequests:
-							# fileno is a filedescriptor for communication with the unprivileged process
+							if fileno in rootRequests:
+								# fileno is a filedescriptor for communication with the unprivileged process
 
-							# check whether connection to client was shut down
-							if not rootRequests[fileno][1] in requests:
-								self.epoll.modify(fileno, 0)
-								#print 'shutdown connection to root:',fileno
-								rootRequests[fileno][0].shutdown(socket.SHUT_RDWR)
-								break
+								# check whether connection to client was shut down
+								if not rootRequests[fileno][1] in requests:
+									self.epoll.modify(fileno, 0)
+									#print 'shutdown connection to root:',fileno
+									rootRequests[fileno][0].shutdown(socket.SHUT_RDWR)
+									break
 
-							# receive part of the pickled message from the unprivileged process
-							msg = rootRequests[fileno][0].recv(self.config.configurations['socketbuffersize'])
-							rootRequests[fileno][2] = rootRequests[fileno][2] + msg
-							m = re.match(r'(\d+);(.*)',rootRequests[fileno][2],re.DOTALL)
-							if m != None:
-								msgLength = int(m.group(1))
-								msg = m.group(2)
-								if msgLength <= len(msg):
-									# 4. response object fully received
-									rootRequests[fileno][2] = msg[msgLength:]
-									msg = msg[:msgLength]
+								# receive part of the pickled message from the unprivileged process
+								msg = rootRequests[fileno][0].recv(self.config.configurations['socketbuffersize'])
+								rootRequests[fileno][2] = rootRequests[fileno][2] + msg
+								m = re.match(r'(\d+);(.*)',rootRequests[fileno][2],re.DOTALL)
+								if m != None:
+									msgLength = int(m.group(1))
+									msg = m.group(2)
+									if msgLength <= len(msg):
+										# 4. response object fully received
+										rootRequests[fileno][2] = msg[msgLength:]
+										msg = msg[:msgLength]
 
-									request = requests[rootRequests[fileno][1]]
-									wrapper = cPickle.loads(msg)
-									# The first flush contains the whole header and a part of the body
-									if not wrapper.response.flushed:
-										request.response = wrapper.response
-										request.request = wrapper.request
-									else:
-										# later just append message and update connectionclose
-										request.response.message = request.response.message + wrapper.response.message
-										request.response.connectionClose = wrapper.response.connectionClose
+										request = requests[rootRequests[fileno][1]]
+										wrapper = cPickle.loads(msg)
+										# The first flush contains the whole header and a part of the body
+										if not wrapper.response.flushed:
+											request.response = wrapper.response
+											request.request = wrapper.request
+										else:
+											# later just append message and update connectionclose
+											request.response.message = request.response.message + wrapper.response.message
+											request.response.connectionClose = wrapper.response.connectionClose
 
-									# Check if Location flag is set in CGI response (local redirect)
-									if request.checkReprocess():
+										# Check if Location flag is set in CGI response (local redirect)
+										if request.checkReprocess():
 	
+											# establish connection to root process
+											rootConn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+											rootConn.connect(self.config.configurations['communicationsocketfile'])
+											rootConn.setblocking(0)
+											#print '4. register new root connection:',rootConn.fileno()
+											self.epoll.register(rootConn, select.EPOLLOUT)
+
+											# update rootRequest array with new request data
+											rootRequests[rootConn.fileno()] = [rootConn,rootRequests[fileno][1],request.pickle(True)]
+
+										else:
+											# register client connection for poll out, since data is available
+											try:
+												#print '4. register client for pollout:',rootRequests[fileno][1]
+												self.epoll.register(rootRequests[fileno][1],select.EPOLLOUT)
+											except:
+												pass
+
+										if request.response.connectionClose:
+											# close connection to unprivileged process
+											self.epoll.modify(fileno, 0)
+											#print '5. shutdown connection to root:',fileno
+											rootRequests[fileno][0].shutdown(socket.SHUT_RDWR)
+	
+							else:
+								# 2. ready to receive request data from client
+								request = requests[fileno]
+
+								if request.receiveRequestFromClient():
+									# request fully received
+
+									# just forward request to root process if syntax is valid
+									if request.checkValidity():
+
 										# establish connection to root process
 										rootConn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 										rootConn.connect(self.config.configurations['communicationsocketfile'])
 										rootConn.setblocking(0)
-										#print '4. register new root connection:',rootConn.fileno()
+										#print '2. register rootRequest:',rootConn.fileno(),' unregister request:',fileno
+
 										self.epoll.register(rootConn, select.EPOLLOUT)
 
-										# update rootRequest array with new request data
-										rootRequests[rootConn.fileno()] = [rootConn,rootRequests[fileno][1],request.pickle(True)]
+										# store request information in rootRequests array
+										rootRequests[rootConn.fileno()] = [rootConn,fileno,request.pickle(True)]
+									
+										# unregister client, since no data to send to client is available jet
+										self.epoll.unregister(fileno)
 
 									else:
-										# register client connection for poll out, since data is available
-										try:
-											#print '4. register client for pollout:',rootRequests[fileno][1]
-											self.epoll.register(rootRequests[fileno][1],select.EPOLLOUT)
-										except:
-											pass
+										# syntax error in request, modify epoll fileno to send error data to client
+										self.epoll.modify(fileno, select.EPOLLOUT)
 
+						elif event & select.EPOLLOUT:
+							# fileno is writable
+
+							if fileno in rootRequests:
+								# 3. forward request to root process
+								byteswritten = rootRequests[fileno][0].send(rootRequests[fileno][2])
+								rootRequests[fileno][2] = rootRequests[fileno][2][byteswritten:]
+
+								if len (rootRequests[fileno][2]) == 0:
+									#print '3. data sent to root:',fileno
+									# all data sent to root, modify to read response from root
+									self.epoll.modify(fileno, select.EPOLLIN)
+
+							else:
+								# 5. ready to send response data to client
+								request = requests[fileno]
+								if request.flushResponseToClient():
+									# all currently available data flushed to client
 									if request.response.connectionClose:
-										# close connection to unprivileged process
+										# connection to root closed, so no more data
 										self.epoll.modify(fileno, 0)
-										#print '5. shutdown connection to root:',fileno
-										rootRequests[fileno][0].shutdown(socket.SHUT_RDWR)
-	
-						else:
-							# 2. ready to receive request data from client
-							request = requests[fileno]
+										try:
+											#print '6. shutdown connection to client:',fileno
+											request.connection.shutdown(socket.SHUT_RDWR)
+										except socket.error:
+											pass
+									else:
+										# there is more data that root has to send
+										self.epoll.unregister(fileno)
+										#print '4.1 unregister client connection:',fileno
 
-							if request.receiveRequestFromClient():
-								# request fully received
+						elif event and select.EPOLLHUP:
+							# fileno hung up or shutdown requested
+							try:
+								self.epoll.unregister(fileno)
 
-								# just forward request to root process if syntax is valid
-								if request.checkValidity():
-
-									# establish connection to root process
-									rootConn = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-									rootConn.connect(self.config.configurations['communicationsocketfile'])
-									rootConn.setblocking(0)
-									#print '2. register rootRequest:',rootConn.fileno(),' unregister request:',fileno
-
-									self.epoll.register(rootConn, select.EPOLLOUT)
-
-									# store request information in rootRequests array
-									rootRequests[rootConn.fileno()] = [rootConn,fileno,request.pickle(True)]
-									
-									# unregister client, since no data to send to client is available jet
-									self.epoll.unregister(fileno)
-
+								if fileno in rootRequests:
+									#print '7. unregister/close rootRequest:',fileno
+									rootRequests[fileno][0].close()
+									del rootRequests[fileno]
 								else:
-									# syntax error in request, modify epoll fileno to send error data to client
-									self.epoll.modify(fileno, select.EPOLLOUT)
-
-					elif event & select.EPOLLOUT:
-						# fileno is writable
-
-						if fileno in rootRequests:
-							# 3. forward request to root process
-							byteswritten = rootRequests[fileno][0].send(rootRequests[fileno][2])
-							rootRequests[fileno][2] = rootRequests[fileno][2][byteswritten:]
-
-							if len (rootRequests[fileno][2]) == 0:
-								#print '3. data sent to root:',fileno
-								# all data sent to root, modify to read response from root
-								self.epoll.modify(fileno, select.EPOLLIN)
-
-						else:
-							# 5. ready to send response data to client
-							request = requests[fileno]
-							if request.flushResponseToClient():
-								# all currently available data flushed to client
-								if request.response.connectionClose:
-									# connection to root closed, so no more data
-									self.epoll.modify(fileno, 0)
-									try:
-										#print '6. shutdown connection to client:',fileno
-										request.connection.shutdown(socket.SHUT_RDWR)
-									except socket.error:
-										pass
-								else:
-									# there is more data that root has to send
-									self.epoll.unregister(fileno)
-									#print '4.1 unregister client connection:',fileno
-
-					elif event and select.EPOLLHUP:
-						# fileno hung up or shutdown requested
+									#print '7. unregister/close requests:',fileno
+									requests[fileno].connection.close()
+									del requests[fileno]
+							except socket.error:
+								pass
+					except:
+						# on any error shut down client connection
+						self.logError('Communication error at file descriptor '+str(fileno))
 						try:
 							self.epoll.unregister(fileno)
 
 							if fileno in rootRequests:
-								#print '7. unregister/close rootRequest:',fileno
 								rootRequests[fileno][0].close()
 								del rootRequests[fileno]
-							else:
-								#print '7. unregister/close requests:',fileno
+							if fileno in requests:
 								requests[fileno].connection.close()
 								del requests[fileno]
-						except socket.error:
+						except:
 							pass
-
 		finally:
 			self.epoll.unregister(self.listener.fileno())
 			self.epoll.close()

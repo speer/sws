@@ -1,6 +1,8 @@
 import sys, os, time, atexit, stat
 from signal import SIGTERM
 
+# This class implements a daemon. It is open source and public domain.
+# And has been modified for our purposes.
 class Daemon:
 	"""
 	A generic daemon class.
