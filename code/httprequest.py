@@ -957,16 +957,12 @@ class CGIExecutor():
 					self.process.stdin.write(self.request.request.body)
 
 				# fetch response blockwise and flush to listener
-				err = 'init'
 				out = self.process.stdout.read(self.request.config.configurations['socketbuffersize'])
-				errorData = ''
 				tmp = ''
 				headerParsed = False
 				success = True
-				while err != '' or out != '':
+				while out != '':
 					nextOut = self.process.stdout.read(self.request.config.configurations['socketbuffersize'])
-					err = self.process.stderr.read(self.request.config.configurations['socketbuffersize'])
-					errorData = errorData + err
 
 					if not headerParsed:
 						tmp = tmp + out
@@ -987,6 +983,8 @@ class CGIExecutor():
 
 				if not self.request.response.flushed:
 					self.request.sendError(500,'Syntax Error in CGI Response')
+
+				errorData = self.process.communicate()[1]
 
 				# if some data is available on standarderror, log to errorlog
 				if errorData.strip() != '':
