@@ -1006,16 +1006,21 @@ class CGIExecutor():
 		return 0
 
 
+# executes one filter after the other
 class OutputFilterProcessor:
 
 	def __init__(self, request):
 		self.request = request
+		# response message
 		self.message = ''
+		# <directory> that matched the request
 		self.outputFilterDirectory = None
+		# current filter of the filterchain
 		self.currentFilter = None
+		# current filterprocess
 		self.process = None
 
-
+	# returns just the body of the response message
 	def getBody(self):
 		pos = self.message.find('\r\n\r\n')
 		if pos == -1:
@@ -1023,6 +1028,7 @@ class OutputFilterProcessor:
 		else:
 			return self.message[pos+4:]
 
+	# sets just the body of the response message
 	def setBody(self, body):
 		pos = self.message.find('\r\n\r\n')
 		if pos == -1:
@@ -1030,10 +1036,12 @@ class OutputFilterProcessor:
 		else:
 			self.message = self.message[:pos+4] + body
 
+	# starts the output filter processing, or just returns if there is no filter specified
 	def execute(self):
 		if self.request.response.statusCode >= 400 or self.outputFilterDirectory == None:
 			return True
 		
+		# run filter in a separate thread, so it can be killed after a timeout (if it takes too long)
 		def runFilter():
 			try:
 				script = self.request.config.virtualHosts[self.request.request.virtualHost]['extfilterdefine'][self.currentFilter]

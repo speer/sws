@@ -50,8 +50,6 @@ class Daemon:
 			sys.exit(1)
 
 		# redirect standard file descriptors
-		# TODO: uncomment stdin/out/err redirections
-		'''
 		sys.stdout.flush()
 		sys.stderr.flush()
 		si = file(self.stdin, 'r')
@@ -60,7 +58,7 @@ class Daemon:
 		os.dup2(si.fileno(), sys.stdin.fileno())
 		os.dup2(so.fileno(), sys.stdout.fileno())
 		os.dup2(se.fileno(), sys.stderr.fileno())
-		'''
+
 		# write pidfile
 		atexit.register(self.delpid)
 		pid = str(os.getpid())

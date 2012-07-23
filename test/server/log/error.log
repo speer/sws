@@ -1789,3 +1789,160 @@ CGI Executor could not be found: /.sh
 [Thu Jul 19 20:40:06 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
 [Thu Jul 19 20:40:07 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
 [Thu Jul 19 20:40:08 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 20:43:01 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:55:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:55:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:55:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:55:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:55:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:55:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:55:43 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:55:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:55:45 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:55:46 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:55:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:55:48 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:55:50 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 20:55:51 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 20:56:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:56:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:56:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:56:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:56:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:56:47 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:56:48 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:56:49 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:56:50 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:56:51 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:56:52 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:56:54 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:56:55 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 20:56:56 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 20:57:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:57:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:57:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 20:57:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:57:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:57:26 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 20:57:27 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:57:28 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:57:29 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:57:30 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 20:57:31 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:57:32 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:57:33 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 20:57:34 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 20:57:35 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 21:02:37 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 21:02:37 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 21:02:37 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/badheader.pl
+[Thu Jul 19 21:02:37 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 21:02:37 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 21:02:37 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/env.pl
+[Thu Jul 19 21:02:38 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 21:02:40 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Syntax Error in CGI Response: /home/stefan/sws/test/server/docs/localhost/cgi-bin/forever.sh
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script must specify content type: /home/stefan/sws/test/server/docs/localhost/cgi-bin/nocontenttype.pl
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: CGI Script is not accessible/executable: /home/stefan/sws/test/server/docs/localhost/cgi-bin/notexecutable.pl
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 21:02:41 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Recursion in CGI script
+[Thu Jul 19 21:02:42 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 21:02:43 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Filter aborted because of timeout forever: /home/stefan/sws/test/server/docs/localhost/filter2/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/filter2/index2.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test4: /home/stefan/sws/test/server/docs/localhost/filter5/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 500 Internal Server Error: Error executing filter test2: /home/stefan/sws/test/server/docs/localhost/filter3/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 403 Forbidden: Not allowed to access resource outside documentroot: /home/stefan/sws/test/server/docs/127.0.0.1/index.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 400 Bad Request: Command not supported
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 21:02:44 2012] [error] [client 127.0.0.1] 404 Not Found: /home/stefan/sws/test/server/docs/localhost/index_notfound.html
+[Thu Jul 19 21:02:45 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
+[Thu Jul 19 21:02:47 2012] [error] [client 127.0.0.1] PHP Notice:  Undefined index: v2 in /home/stefan/sws/test/server/docs/localhost/cgi-bin/php/index.php on line 2
