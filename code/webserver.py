@@ -8,6 +8,7 @@ import cPickle
 import re
 import signal
 import logging
+from time import strftime
 
 import httprequest
 import config
@@ -90,7 +91,7 @@ class SecureWebServer (Daemon):
 		success, message, code = self.config.parseFile()
 		if not success:	
 			# log error message
-			logging.getLogger('sws').error(message)
+			logging.getLogger('sws').error('[%s] [error] %s' % (strftime("%a %b %d %H:%M:%S %Y"), message))
 			return message
 
 		self.rootProcess = None
@@ -104,7 +105,7 @@ class SecureWebServer (Daemon):
 			# disable blocking mode of the listener socket
 			self.listener.setblocking(0)
 		except:
-			logging.getLogger('sws').error('Could not bind server to port %s' % str(self.config.configurations['listen']))
+			logging.getLogger('sws').error('[%s] [error] Could not bind server to port %s' % (strftime("%a %b %d %H:%M:%S %Y"), str(self.config.configurations['listen'])))
 			return 'Could not bind server to port ' + str(self.config.configurations['listen'])
 
 		return None

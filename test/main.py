@@ -235,6 +235,16 @@ class ConfigTestCase (unittest.TestCase):
 		c = config.SwsConfiguration(testfolder)
 		assert c.parseFile()[2] == 53
 
+	def testConfigVHWrongHeader(self):
+		testfolder = self.CONFIG_FOLDER + '/t45'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 54
+
+	def testConfigVHWrongStopInheritation(self):
+		testfolder = self.CONFIG_FOLDER + '/t46'
+		c = config.SwsConfiguration(testfolder)
+		assert c.parseFile()[2] == 55
+
 	def testConfigFileOK(self):
 		testfolder = self.CONFIG_FOLDER + '/t50'
 		c = config.SwsConfiguration(testfolder)
@@ -297,11 +307,9 @@ class ConfigTestCase (unittest.TestCase):
 		assert len(c.virtualHosts[vH1]['directory']) == 4
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2]['extension'] == '.sh3'
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin/sh']['cgihandler'][2]['executor'] == '/bin/bash'
-		assert len(c.virtualHosts[vH1]['addtype']) == 2
-		assert c.virtualHosts[vH1]['addtype'][0]['extension'] == '.css'
-		assert c.virtualHosts[vH1]['addtype'][0]['type'] == 'text/css'
-		assert c.virtualHosts[vH1]['addtype'][1]['extension'] == '.html'
-		assert c.virtualHosts[vH1]['addtype'][1]['type'] == 'text/html'
+		assert len(c.virtualHosts[vH1]['directory']['/']['addtype']) == 2
+		assert c.virtualHosts[vH1]['directory']['/']['addtype']['.css'] == 'text/css'
+		assert c.virtualHosts[vH1]['directory']['/']['addtype']['.html'] == 'text/html'
 		assert len(c.virtualHosts[vH1]['extfilterdefine']) == 2
 		assert c.virtualHosts[vH1]['extfilterdefine']['test1'][0] == '/bin/test1'
 		assert c.virtualHosts[vH1]['extfilterdefine']['test1'][1] == 'param'
@@ -309,7 +317,15 @@ class ConfigTestCase (unittest.TestCase):
 		assert len(c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter']) == 3
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][0] == 'test1'
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][1] == 'test2'
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][2] == 'test1'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['setoutputfilter'][2] == 'test1' 
+		assert len(c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['addheader']) == 2
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['addheader']['content-encoding'] == 'none'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['addheader']['content-type'] == 'text/html'
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['directoryindex'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['cgihandler'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['setoutputfilter'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['addheader'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['addtype'] == True
 		
 		# test VH2
 		assert c.virtualHosts[vH2]['serveradmin'] == ''
@@ -579,6 +595,66 @@ class ServerTestCase (unittest.TestCase):
 				assert data == 'successnotcgi'
 			connection.close()
 
+	def testLocalhostFilter(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/filter/index.html')
+			response = connection.getresponse()
+			assert response.status == 200
+			assert response.getheader('content-encoding') == 'gzip'
+			connection.close()
+
+	def testLocalhostEndlessFilter(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/filter2/index.html')
+			response = connection.getresponse()
+			assert response.status == 500
+			connection.close()
+
+	def testLocalhostFilterFileNotFound(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/filter2/index2.html')
+			response = connection.getresponse()
+			assert response.status == 404
+			connection.close()
+
+	def testLocalhostFilterScriptNotFound(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/filter3/index.html')
+			response = connection.getresponse()
+			assert response.status == 500
+			connection.close()
+
+	def testLocalhostFiltered(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/filter4/index.html')
+			response = connection.getresponse()
+			assert response.status == 200
+			data = response.read()
+			data = data.strip()
+			if method == 'HEAD':
+				assert data == ''
+			else:
+				assert data == 'filtered'
+			connection.close()
+
+	def testLocalhostFilterNotExecutable(self):
+		for method in self.METHODS:
+			connection = httplib.HTTPConnection('localhost', self.PORT)
+			connection.connect()
+			connection.request(method,'/filter5/index.html')
+			response = connection.getresponse()
+			assert response.status == 500
+			connection.close()
 
 if __name__ == "__main__":
 	unittest.main()

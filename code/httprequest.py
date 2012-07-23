@@ -128,7 +128,7 @@ class Response:
 # This class contains the main HTTP functionality (parsing, etc.)
 class HttpRequest:
 
-	SERVER_NAME = 'SWS/0.9'
+	SERVER_NAME = 'SWS/1.0'
 	CGI_PROTOCOL = 'CGI/1.1'
 	HTTP_PROTOCOL = 'HTTP/1.1'
 	ACCEPTED_PROTOCOLS = ['HTTP/1.0','HTTP/1.1']
@@ -156,6 +156,30 @@ class HttpRequest:
 		self.requestNumber = 1
 		# Output Filter Processor
 		self.ofProcessor = OutputFilterProcessor(self)
+
+
+	# log into access-log file
+	def logAccess(self):
+		referer = '-'
+		useragent = '-'
+		host = '-'
+		req = '-'
+		if self.request.getHeader ('referer') != None:
+			referer = self.request.getHeader('referer')
+		if self.request.getHeader ('user-agent') != None:
+			useragent = self.request.getHeader('user-agent')
+		if self.request.host != None:
+			host = self.request.host
+		if self.request.method != None and self.request.uri != None and self.request.protocol != None:
+			req = self.request.method + ' ' + self.request.uri + ' ' + self.request.protocol
+
+		logging.getLogger(self.request.virtualHost).info('%s:%i %s - - [%s] "%s" %i %i "%s" "%s"' % (host,self.request.serverPort,self.request.remoteAddr,strftime("%d/%b/%Y:%H:%M:%S %z"),req,self.response.statusCode,self.response.contentLength,referer,useragent))
+
+
+	# log into error-log file
+	def logError(self, message):
+		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
+
 
 	# determines connection specific variables
 	def determineHostVars (self):
@@ -285,6 +309,7 @@ class HttpRequest:
 		
 		return True
 
+	# determines virtualhost and filepath
 	def determineFilepath(self):
 		for vHost in self.config.virtualHosts.keys():
 			if self.config.virtualHosts[vHost]['servername'] == self.request.host or self.request.host in self.config.virtualHosts[vHost]['serveralias']:
@@ -293,6 +318,7 @@ class HttpRequest:
 
 		self.request.filepath = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.uri)
 
+	# determines the chain of matching directories
 	def determineDirectoryChain(self):
 		self.request.directoryChain = ['/']
 		# determine list of <directory> directives that match request
@@ -305,6 +331,109 @@ class HttpRequest:
 				self.request.directoryChain.append(directory)
 
 		self.request.directoryChain.sort(reverse=True)
+
+	# checks whether path is jailed into the jail
+	def isJailedInto(self, jail, path):
+		return path.startswith(jail + sep) or path == jail
+
+	# updates filename according to a directoryindex
+	def determineDirectoryIndex(self):
+		# check for matching directoryindex
+		if not os.path.isdir(self.request.filepath):
+			return
+		for directory in self.request.directoryChain:
+			# if no directoryindex in current directory, search again one level up
+			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']) == 0:
+				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['directoryindex']:
+					break
+				else:
+					continue
+			# if directoryindex specified, search for match and then stop in any case
+			for index in self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']:
+				f = path.abspath (self.request.filepath + sep + index)
+				if os.path.isfile(f):
+					self.request.filepath = f
+			return
+
+	def determinePathInfoCGI(self):
+		# determine path (PATH_INFO, PATH_TRANSLATE)
+		cgiRoot = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.cgiDirectory)
+		uri = self.request.filepath[len(cgiRoot):]
+		lines = uri.split('/')
+		cgiScriptPath = cgiRoot
+		for line in lines:
+			if line == '':
+				continue
+			cgiScriptPath = cgiScriptPath + sep + line
+			if os.path.isfile(cgiScriptPath):
+				break
+		if cgiScriptPath != self.request.filepath:
+			self.request.cgiPathInfo = urllib.unquote(self.request.filepath[len(cgiScriptPath):])
+			self.request.filepath = cgiScriptPath
+
+	def determineCGIDirectory(self):
+		self.request.cgiDirectory = None
+		# check for matching folders
+		for directory in self.request.directoryChain:
+			# if no cgi-handler in current directory, search again one level up
+			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['cgihandler']) == 0:
+				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['cgihandler']:
+					break
+				else:
+					continue
+			# if cgi-handler specified, set cgiDirectory and stop
+			self.request.cgiDirectory = directory
+			break
+
+	def determineOutputFilterDirectory(self):
+		self.ofProcessor.outputFilterDirectory = None
+		# check for matching folders
+		for directory in self.request.directoryChain:
+			# if no output filter in current directory, search again one level up
+			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['setoutputfilter']) == 0:
+				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['setoutputfilter']:
+					break
+				else:
+					continue
+			# if output filter specified, set outputFilterDirectory and stop
+			self.ofProcessor.outputFilterDirectory = directory
+			break
+
+	# determine request properties and check validity
+	def checkRequest(self):
+		self.request.cgiExecutor = None
+
+		# check whether directory specifies any CGI handler
+		self.determineCGIDirectory()
+
+		# check whether directory specifies any Output filters
+		self.determineOutputFilterDirectory()
+
+		# request is inside a cgi directory
+		if self.request.cgiDirectory != None and self.response.statusCode < 400:
+			# check pathinfo for regular requests, not used for errordocuments
+			self.determinePathInfoCGI()
+
+		# check directoryIndex if path is a directory
+		self.determineDirectoryIndex()
+
+		# check if resource is a valid file
+		if not os.path.isfile(self.request.filepath):
+			# if a directory is accessed, deliver 403: Forbidden error
+			if os.path.isdir(self.request.filepath):
+				return 403
+			# else deliver a 404: Not Found error
+			else:
+				return 404
+
+		if self.request.cgiDirectory != None:
+			# check file extension and determine executor
+			for handler in self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.cgiDirectory]['cgihandler']:
+				if self.request.filepath.endswith(handler['extension']):
+					self.request.cgiExecutor = handler['executor']
+					return -1
+
+		return -2
 
 
 	# parses an URI (ex. GET / HTTP/1.1) and sets uri, query, host and filepath variables
@@ -344,29 +473,49 @@ class HttpRequest:
 		return True
 
 
-	# uses the magic library to determine the mimetype of a file
-	# it does not look at the file extension, but at the content of the file
-	# if addtype directive specified, its content type will be used
-	def getContentTypeFromFile(self,filename):
+	# returns a matching content type, considering the virtualhosts config file, otherwise none
+	def getVHConfigContentType(self):
 		if self.request.virtualHost != None:
-			for typ in self.config.virtualHosts[self.request.virtualHost]['addtype']:
-				if filename.endswith(typ['extension']):
-					return typ['type']
+			for directory in self.request.directoryChain:
+				dirtypes = self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['addtype']
+				if len(dirtypes) == 0:
+					if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['addtype']:
+						break
+					else:
+						continue
+				for typ in dirtypes.keys():
+					if self.request.filepath.endswith(typ):
+						return dirtypes[typ]
+		return None
 
-		for typ in self.config.configurations['addtype']:
-			if filename.endswith(typ['extension']):
-				return typ['type']
+	# returns a matching content type, considering the main config file, otherwise none
+	def getMainConfigContentType(self):
+		for typ in self.config.configurations['addtype'].keys():
+			if self.request.filepath.endswith(typ):
+				return self.config.configurations['addtype'][typ]
+		return None
+
+
+	# uses the magic library to determine the mimetype of a file or eventual configuration directives
+	def determineContentType(self):
+		contentType = self.getVHConfigContentType()
+		if contentType == None:
+			contentType = self.getMainConfigContentType()
+		if contentType == None:
+			try:
+				mime = magic.Magic(mime=True)
+				contentType = mime.from_file(self.request.filepath)
+			except Exception:
+				contentType = self.config.configurations['defaulttype']
+
 		try:
-			mime = magic.Magic(mime=True)
 			mime_encoding = magic.Magic(mime_encoding=True)
-			contentType = mime.from_file(filename)
-			charset = mime_encoding.from_file(filename)
+			charset = mime_encoding.from_file(self.request.filepath)
 			if charset != 'binary':
 				return contentType + ';charset=' + charset
-			else:
-				return contentType
 		except Exception:
-			return self.config.configurations['defaulttype']
+			pass
+		return contentType
 
 
 	# determines and sets environment variables, provided to cgi scripts
@@ -417,7 +566,7 @@ class HttpRequest:
 		self.response.setHeader('Connection','close')
 		
 		# determine contentlength
-		if self.response.contentLength > 0:
+		if self.response.contentLength > 0 and self.ofProcessor.outputFilterDirectory == None:
 			self.response.setHeader('Content-Length', str(self.response.contentLength))
 
 		# set content-type if not a cgi script
@@ -427,6 +576,19 @@ class HttpRequest:
 			# add cgi headers to response
 			for key in self.response.cgiHeaders.keys():
 				self.response.setHeader(key,self.response.cgiHeaders[key])
+
+		# set headers from configuration, but nor for errordocuments
+		if self.request.virtualHost != None and self.response.statusCode < 400:
+			for directory in self.request.directoryChain:
+				dirheaders = self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['addheader']
+				if len(dirheaders) == 0:
+					if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['addheader']:
+						break
+					else:
+						continue
+				for header in dirheaders.keys():
+					self.response.setHeader(header,dirheaders[header])
+				break
 
 		# generate Status line
 		m = HttpRequest.HTTP_PROTOCOL+' '+str(self.response.statusCode)+' '+self.response.statusMessage+'\r\n'
@@ -564,94 +726,7 @@ class HttpRequest:
 				self.connectionClosed = True
 		except:
 			self.connection.close()
-			self.connectionClosed = True
-
-
-	# checks whether path is jailed into the jail
-	def isJailedInto(self, jail, path):
-		return path.startswith(jail + sep) or path == jail
-
-	# updates filename according to a directoryindex
-	def checkDirectoryIndex(self):
-		# check for matching directoryindex
-		if not os.path.isdir(self.request.filepath):
-			return
-		for directory in self.request.directoryChain:
-			# if no directoryindex in current directory, search again one level up
-			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']) == 0:
-				continue
-			# if directoryindex specified, search for match and then stop in any case
-			for index in self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']:
-				f = path.abspath (self.request.filepath + sep + index)
-				if os.path.isfile(f):
-					self.request.filepath = f
-			return
-
-	def checkPathInfoCGI(self):
-		# determine path (PATH_INFO, PATH_TRANSLATE)
-		cgiRoot = path.abspath(self.config.virtualHosts[self.request.virtualHost]['documentroot'] + sep + self.request.cgiDirectory)
-		uri = self.request.filepath[len(cgiRoot):]
-		lines = uri.split('/')
-		cgiScriptPath = cgiRoot
-		for line in lines:
-			if line == '':
-				continue
-			cgiScriptPath = cgiScriptPath + sep + line
-			if os.path.isfile(cgiScriptPath):
-				break
-		if cgiScriptPath != self.request.filepath:
-			self.request.cgiPathInfo = urllib.unquote(self.request.filepath[len(cgiScriptPath):])
-			self.request.filepath = cgiScriptPath
-
-	# checks if request is a cgi-request (according to handler (ex. .pl, .sh, etc.))
-	def checkRequest(self):
-		self.request.cgiDirectory = None
-		self.request.cgiExecutor = None
-		self.ofProcessor.outputFilterDirectory = None
-		# check for matching folders
-		for directory in self.request.directoryChain:
-			# if no cgi-handler in current directory, search again one level up
-			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['cgihandler']) == 0:
-				continue
-			# if cgi-handler specified, set cgiDirectory and stop
-			self.request.cgiDirectory = directory
-			break
-
-		# check for matching folders
-		for directory in self.request.directoryChain:
-			# if no output filter in current directory, search again one level up
-			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['setoutputfilter']) == 0:
-				continue
-			# if output filter specified, set outputFilterDirectory and stop
-			self.ofProcessor.outputFilterDirectory = directory
-			break
-
-		# request is inside a cgi directory
-		if self.request.cgiDirectory != None and self.response.statusCode < 400:
-			# check pathinfo for regular requests, not used for errordocuments
-			self.checkPathInfoCGI()
-
-		# check directoryIndex if path is a directory
-		self.checkDirectoryIndex()
-
-		# check if resource is a valid file
-		if not os.path.isfile(self.request.filepath):
-			# if a directory is accessed, deliver 403: Forbidden error
-			if os.path.isdir(self.request.filepath):
-				return 403
-			# else deliver a 404: Not Found error
-			else:
-				return 404
-
-		if self.request.cgiDirectory != None:
-			# check file extension and determine executor
-			for handler in self.config.virtualHosts[self.request.virtualHost]['directory'][self.request.cgiDirectory]['cgihandler']:
-				if self.request.filepath.endswith(handler['extension']):
-					self.request.cgiExecutor = handler['executor']
-					return -1
-
-		return -2
-			
+			self.connectionClosed = True	
 
 
 	# processes the request, i.e. determines whether a CGI script or a normal resource was accessed
@@ -673,12 +748,13 @@ class HttpRequest:
 		else:
 			self.sendError(403,'Not allowed to access resource outside documentroot')
 
+
 	# processes a normal resource request
 	def processDocument(self):
 		try:
 			# privilege separation
 			self.removePrivileges()
-			self.response.contentType = self.getContentTypeFromFile(self.request.filepath)
+			self.response.contentType = self.determineContentType()
 			self.response.contentLength = os.path.getsize(self.request.filepath)
 			self.generateResponseHeaderMessage()
 			# HEAD request must not have a response body, no need to access file
@@ -766,28 +842,6 @@ class HttpRequest:
 			return True
 		else:
 			return False
-
-	# log into access-log file
-	def logAccess(self):
-		referer = '-'
-		useragent = '-'
-		host = '-'
-		req = '-'
-		if self.request.getHeader ('referer') != None:
-			referer = self.request.getHeader('referer')
-		if self.request.getHeader ('user-agent') != None:
-			useragent = self.request.getHeader('user-agent')
-		if self.request.host != None:
-			host = self.request.host
-		if self.request.method != None and self.request.uri != None and self.request.protocol != None:
-			req = self.request.method + ' ' + self.request.uri + ' ' + self.request.protocol
-
-		logging.getLogger(self.request.virtualHost).info('%s:%i %s - - [%s] "%s" %i %i "%s" "%s"' % (host,self.request.serverPort,self.request.remoteAddr,strftime("%d/%b/%Y:%H:%M:%S %z"),req,self.response.statusCode,self.response.contentLength,referer,useragent))
-
-
-	# log into error-log file
-	def logError(self, message):
-		logging.getLogger(self.request.virtualHost).error('[%s] [error] [client %s] %s' % (strftime("%a %b %d %H:%M:%S %Y"), self.request.remoteAddr, message))
 
 
 	# parses the headers of the CGI script 
@@ -881,8 +935,6 @@ class CGIExecutor():
 		self.process = None
 		# HttpRequest object
 		self.request = request
-
-
 
 
 	# executes the CGI script in a thread, which creates a new process that executes the requested scriptfile
