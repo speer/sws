@@ -321,11 +321,11 @@ class ConfigTestCase (unittest.TestCase):
 		assert len(c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['addheader']) == 2
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['addheader']['content-encoding'] == 'none'
 		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['addheader']['content-type'] == 'text/html'
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['directoryindex'] == True
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['cgihandler'] == True
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['setoutputfilter'] == True
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['addheader'] == True
-		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritation']['addtype'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritance']['directoryindex'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritance']['cgihandler'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritance']['setoutputfilter'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritance']['addheader'] == True
+		assert c.virtualHosts[vH1]['directory']['/docs/cgi-bin']['stopinheritance']['addtype'] == True
 		
 		# test VH2
 		assert c.virtualHosts[vH2]['serveradmin'] == ''

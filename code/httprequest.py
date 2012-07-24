@@ -344,7 +344,7 @@ class HttpRequest:
 		for directory in self.request.directoryChain:
 			# if no directoryindex in current directory, search again one level up
 			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['directoryindex']) == 0:
-				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['directoryindex']:
+				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritance']['directoryindex']:
 					break
 				else:
 					continue
@@ -377,7 +377,7 @@ class HttpRequest:
 		for directory in self.request.directoryChain:
 			# if no cgi-handler in current directory, search again one level up
 			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['cgihandler']) == 0:
-				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['cgihandler']:
+				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritance']['cgihandler']:
 					break
 				else:
 					continue
@@ -391,7 +391,7 @@ class HttpRequest:
 		for directory in self.request.directoryChain:
 			# if no output filter in current directory, search again one level up
 			if len(self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['setoutputfilter']) == 0:
-				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['setoutputfilter']:
+				if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritance']['setoutputfilter']:
 					break
 				else:
 					continue
@@ -479,7 +479,7 @@ class HttpRequest:
 			for directory in self.request.directoryChain:
 				dirtypes = self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['addtype']
 				if len(dirtypes) == 0:
-					if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['addtype']:
+					if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritance']['addtype']:
 						break
 					else:
 						continue
@@ -582,7 +582,7 @@ class HttpRequest:
 			for directory in self.request.directoryChain:
 				dirheaders = self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['addheader']
 				if len(dirheaders) == 0:
-					if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritation']['addheader']:
+					if self.config.virtualHosts[self.request.virtualHost]['directory'][directory]['stopinheritance']['addheader']:
 						break
 					else:
 						continue

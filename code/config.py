@@ -102,7 +102,7 @@ class SwsConfiguration:
 			'addheader':{},
 			'addtype':{},
 			# subfolders should(n't) inherit directive from parent folder
-			'stopinheritation':{
+			'stopinheritance':{
 				'directoryindex':False,
 				'cgihandler':False,
 				'setoutputfilter':False,
@@ -339,7 +339,7 @@ class SwsConfiguration:
 	
 				directive = fields[0].lower()
 
-				if directoryOpen and directive not in ['directoryindex','cgihandler','setoutputfilter','addheader','stopinheritation','addtype']:
+				if directoryOpen and directive not in ['directoryindex','cgihandler','setoutputfilter','addheader','stopinheritance','addtype']:
 					return (False,'Directive not allowed in <Directory>: '+directive,30)
 
 				# defaultvirtualhost
@@ -359,7 +359,7 @@ class SwsConfiguration:
 				if directive in ['errordocument','addtype'] and len(fields) != 3:
 					return (False, 'Syntax error in configuration directive: '+line,34)
 
-				if directive not in ['errordocument','directoryindex','serveralias','cgihandler','addtype','extfilterdefine','addheader','stopinheritation'] and len(fields) != 2:
+				if directive not in ['errordocument','directoryindex','serveralias','cgihandler','addtype','extfilterdefine','addheader','stopinheritance'] and len(fields) != 2:
 					return (False, 'Syntax error in configuration directive: '+line,35)
 
 				if directive in ['cgihandler'] and len(fields) > 3:
@@ -420,7 +420,7 @@ class SwsConfiguration:
 					continue
 
 				# possible multiple values
-				if directive in ['stopinheritation']:
+				if directive in ['stopinheritance']:
 					first = False
 					for field in fields:
 						if not first:
